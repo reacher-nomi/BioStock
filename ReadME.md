@@ -134,7 +134,7 @@ This repository provides a working, course-compliant foundation and CI automatio
 ## 10) Professor Submission Comment (copy/paste)
 
 ```text
-Repository: https://github.com/<your-org-or-user>/<your-repo>
+Repository: https://github.com/reacher-nomi/BioStock
 
 This repo contains a fully functioning one-button app where the frontend sends input to a Django backend, and the backend writes the value to PostgreSQL. It is fully containerized with Docker and cloud-deployable, and it runs in GitHub Codespaces. The README explains our human + AI team workflow, asynchronous agent development process, governance, and how we optimize across performance, development time, cost, accuracy, usability, security, scalability, extensibility/maintainability, and traceability.
 ```
