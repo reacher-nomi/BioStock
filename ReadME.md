@@ -1,3 +1,6 @@
+#**BioStock**
+The idea is based on: "Can behavioral health be turned into a measurable, incentivized system?"
+
 # BioStock One-Button App
 
 This repository is a full `React + Django + PostgreSQL` prototype:
