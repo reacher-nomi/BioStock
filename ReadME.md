@@ -1,6 +1,6 @@
 # BioStock One-Button App
 
-This repository is a full `React + Django + PostgreSQL` prototype for the course requirement:
+This repository is a full `React + Django + PostgreSQL` prototype:
 
 - one button on the frontend
 - button calls backend API
