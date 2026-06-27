@@ -1,0 +1,30 @@
+### Python ###
+venv/
+__pycache__/
+*.pyc
+*.db
+.env
+
+### Node / Expo ###
+node_modules/
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+### Android ###
+android/.gradle/
+android/.idea/
+android/app/build/
+android/build/
+*.keystore
+!debug.keystore
+local.properties
+
+### IDE ###
+.idea/
+.vscode/
+
+### OS ###
+.DS_Store
+Thumbs.db

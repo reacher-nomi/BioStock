@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Bio-Stock",
+    "slug": "bio-stock",
+    "version": "1.0.0",
+    "scheme": "bio-stock",
+    "assetBundlePatterns": ["**/*"],
+    "ios": { "supportsTablet": true },
+    "android": {
+      "package": "com.biostock.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {}
+  }
+}
