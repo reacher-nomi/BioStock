@@ -8,3 +8,6 @@ pydantic
 email-validator
 pydantic-settings
 python-multipart
+fhir.resources
+pytest
+httpx

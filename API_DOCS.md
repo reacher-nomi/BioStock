@@ -84,6 +84,18 @@ All goals with `days_remaining`. Past-due ACTIVE goals are auto-resolved on read
 Aggregated view: `user_email`, `token_balance`, `current_streak`,
 `today_zone`, `recent_logs`, `active_goals`.
 
+## FHIR (healthcare interoperability)
+Biometrics are exposed as validated **FHIR R4** resources
+(`application/fhir+json`) with real LOINC codes and UCUM units.
+
+### `GET /fhir/Patient/me`
+Returns the authenticated user as a FHIR `Patient` resource.
+
+### `GET /fhir/Observation?days=30`
+Returns a FHIR `Bundle` (type `searchset`) of `Observation` resources — one per
+biometric per day. LOINC codes used: systolic BP `8480-6`, diastolic BP
+`8462-4`, steps `41950-7`, sleep `93832-4`, resting HR `40443-4`.
+
 ## Errors
 JSON `{ "detail": "..." }` with status codes: 400 (bad input), 401 (auth),
 409 (already logged today), 429 (rate limited).

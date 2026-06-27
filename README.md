@@ -23,6 +23,9 @@ multipliers; and tokens can be **staked** on short health goals.
 - **Wallet** — full token transaction ledger (rewards, stakes, refunds)
 - **Portfolio** — cumulative-value chart, zone distribution, baseline progress
 - Dark "liquid glass" UI with bento dashboard and icon navbar
+- **FHIR R4** interoperability (`/fhir/Observation`, `/fhir/Patient`) with LOINC codes
+- Structured JSON logging with request correlation IDs
+- Backend test suite (pytest) run automatically in CI (GitHub Actions)
 
 ## Project Structure
 ```
@@ -82,6 +85,14 @@ Backend env vars (see `bio-stock-api/.env.example`):
 - `JWT_SECRET_KEY` — signing key for JWTs
 - `CORS_ORIGINS` — comma-separated allowed web origins
 - `DATABASE_URL` — SQLAlchemy URL (defaults to local SQLite)
+
+## Tests
+```bash
+cd bio-stock-api
+python -m pytest
+```
+Covers auth, health logging, zone classification, staking, the Δ-engine, and
+FHIR output. Runs automatically on every push via GitHub Actions.
 
 ## Test User
 - Email: `test@test.com`
