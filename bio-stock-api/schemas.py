@@ -1,12 +1,19 @@
 from datetime import date
 from typing import Any
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class UserRegister(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=6)
+    password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if not any(c.isalpha() for c in v) or not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain at least one letter and one number")
+        return v
 
 
 class UserLogin(BaseModel):
@@ -20,11 +27,11 @@ class Token(BaseModel):
 
 
 class HealthLogRequest(BaseModel):
-    systolic_bp: int
-    diastolic_bp: int
-    steps: int
-    sleep_hours: float
-    resting_hr: int
+    systolic_bp: int = Field(ge=60, le=250)
+    diastolic_bp: int = Field(ge=30, le=150)
+    steps: int = Field(ge=0, le=100000)
+    sleep_hours: float = Field(ge=0, le=24)
+    resting_hr: int = Field(ge=30, le=220)
 
 
 class HealthLogResponse(BaseModel):
@@ -41,8 +48,8 @@ class TokenBalance(BaseModel):
 
 
 class GoalCreate(BaseModel):
-    goal_name: str
-    stake_amount: int
+    goal_name: str = Field(min_length=1, max_length=100)
+    stake_amount: int = Field(gt=0, le=1_000_000)
 
 
 class GoalResponse(BaseModel):
