@@ -40,6 +40,8 @@ class HealthLogResponse(BaseModel):
     tokens_earned: int
     compliance_rate: float
     metric_breakdown: dict[str, bool]
+    delta_bonus: int = 0
+    has_baseline: bool = False
 
 
 class TokenBalance(BaseModel):
