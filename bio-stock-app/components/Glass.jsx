@@ -1,49 +1,27 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, View } from "react-native";
 
 import { colors, radius } from "../utils/theme";
 
-// Frosted "liquid glass" panel: translucent fill + soft top-light gradient + hairline stroke.
+// 8% alpha suffix for a 6-digit hex color.
+const tint = (hex, alpha = "14") => `${hex}${alpha}`;
+
+// Frosted "liquid glass" panel: translucent fill + accent sheen + hairline stroke.
 export function GlassCard({ children, style, glow, accent = colors.cyan }) {
   return (
     <View style={[styles.wrap, style]}>
-      {glow ? (
-        <LinearGradient
-          colors={[accent + "26", "transparent"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      ) : null}
-      <LinearGradient
-        colors={["rgba(255,255,255,0.06)", "rgba(255,255,255,0.015)"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
+      {glow ? <View style={[StyleSheet.absoluteFill, { backgroundColor: tint(accent) }]} /> : null}
+      <View style={[StyleSheet.absoluteFill, styles.sheen]} />
       <View style={styles.inner}>{children}</View>
     </View>
   );
 }
 
-// Full-screen app background with ambient corner glows.
+// Full-screen app background with subtle ambient corner tints.
 export function Backdrop({ children, style }) {
   return (
     <View style={[styles.backdrop, style]}>
-      <LinearGradient
-        colors={["#0A1A24", "transparent"]}
-        start={{ x: 1, y: 0 }}
-        end={{ x: 0.3, y: 0.5 }}
-        style={styles.glowTop}
-        pointerEvents="none"
-      />
-      <LinearGradient
-        colors={["#13200E", "transparent"]}
-        start={{ x: 0, y: 1 }}
-        end={{ x: 0.5, y: 0.4 }}
-        style={styles.glowBottom}
-        pointerEvents="none"
-      />
+      <View style={[styles.glow, styles.glowTop]} pointerEvents="none" />
+      <View style={[styles.glow, styles.glowBottom]} pointerEvents="none" />
       {children}
     </View>
   );
@@ -57,8 +35,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: colors.bgElevated,
   },
+  sheen: { backgroundColor: "rgba(255,255,255,0.04)", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" },
   inner: { padding: 18 },
-  backdrop: { flex: 1, backgroundColor: colors.bg },
-  glowTop: { position: "absolute", top: 0, right: 0, width: 320, height: 320, opacity: 0.7 },
-  glowBottom: { position: "absolute", bottom: 0, left: 0, width: 340, height: 300, opacity: 0.6 },
+
+  backdrop: { flex: 1, backgroundColor: colors.bg, overflow: "hidden" },
+  glow: { position: "absolute", width: 360, height: 360, borderRadius: 360, opacity: 0.5 },
+  glowTop: { top: -140, right: -120, backgroundColor: "#0E2A38" },
+  glowBottom: { bottom: -150, left: -120, backgroundColor: "#1A2A12" },
 });
