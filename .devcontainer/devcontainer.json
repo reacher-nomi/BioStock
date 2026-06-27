@@ -1,0 +1,14 @@
+{
+  "name": "Bio-Stock",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "forwardPorts": [8000, 19006],
+  "portsAttributes": {
+    "8000": { "label": "Bio-Stock API" },
+    "19006": { "label": "Bio-Stock Web", "onAutoForward": "openPreview" }
+  },
+  "postCreateCommand": "bash .devcontainer/up.sh",
+  "remoteUser": "vscode"
+}
