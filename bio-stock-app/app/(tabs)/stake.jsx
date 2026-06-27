@@ -8,6 +8,7 @@ import {
 import { Backdrop, GlassCard } from "../../components/Glass";
 import api from "../../utils/api";
 import { colors, font, radius, space } from "../../utils/theme";
+import { showToast } from "../../utils/toast";
 
 const PRESETS = [10, 25, 50, 100];
 const statusColor = (s) => ({ ACTIVE: colors.cyan, SUCCESS: colors.green, FAILED: colors.red }[s] || colors.textFaint);
@@ -36,6 +37,7 @@ export default function StakeScreen() {
     try {
       setError(""); setLoading(true);
       await api.post("/tokens/stake", { goal_name: goalName, stake_amount: Number(stakeAmount) });
+      showToast(`Locked ${stakeAmount} HT on "${goalName}"`);
       await load();
     } catch (err) {
       setError(err.response?.data?.detail || "Staking failed");

@@ -8,6 +8,7 @@ import {
 import { Backdrop, GlassCard } from "../../components/Glass";
 import api from "../../utils/api";
 import { colors, font, radius, space, zoneColor } from "../../utils/theme";
+import { showToast } from "../../utils/toast";
 
 const FIELDS = [
   { key: "systolic_bp", label: "Systolic BP", unit: "mmHg", icon: "heart", placeholder: "110" },
@@ -31,6 +32,7 @@ export default function LogScreen() {
       const payload = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, Number(v)]));
       const res = await api.post("/health/log", payload);
       setResult(res.data);
+      showToast(`${res.data.zone.toUpperCase()} zone · +${res.data.tokens_earned} HT`);
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to submit");
     } finally {

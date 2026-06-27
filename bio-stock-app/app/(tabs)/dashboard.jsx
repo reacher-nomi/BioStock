@@ -3,10 +3,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-  ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from "react-native";
 
 import { Backdrop, GlassCard } from "../../components/Glass";
+import { Skeleton } from "../../components/Skeleton";
 import api from "../../utils/api";
 import { colors, font, radius, space, zoneColor } from "../../utils/theme";
 
@@ -33,15 +34,31 @@ export default function DashboardScreen() {
   useFocusEffect(useCallback(() => { fetchDashboard(); }, [fetchDashboard]));
 
   const onRefresh = () => { setRefreshing(true); fetchDashboard(); };
-  const logout = async () => {
-    await AsyncStorage.removeItem("access_token");
-    router.replace("/(auth)/login");
+  const logout = () => {
+    Alert.alert("Log out?", "You'll need to sign in again.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log out", style: "destructive",
+        onPress: async () => {
+          await AsyncStorage.removeItem("access_token");
+          router.replace("/(auth)/login");
+        },
+      },
+    ]);
   };
 
   if (loading) {
     return (
-      <Backdrop style={styles.center}>
-        <ActivityIndicator size="large" color={colors.cyan} />
+      <Backdrop>
+        <View style={styles.container}>
+          <Skeleton height={28} width="50%" />
+          <Skeleton height={150} style={{ marginTop: 12 }} />
+          <View style={styles.bentoRow}>
+            <Skeleton height={110} style={{ flex: 1 }} />
+            <Skeleton height={110} style={{ flex: 1 }} />
+          </View>
+          <Skeleton height={160} />
+        </View>
       </Backdrop>
     );
   }
@@ -70,6 +87,20 @@ export default function DashboardScreen() {
         </View>
 
         {!!error && <Text style={styles.error}>{error}</Text>}
+
+        {/* Reminder to log today */}
+        {!zone && (
+          <TouchableOpacity onPress={() => router.push("/(tabs)/log")} activeOpacity={0.8}>
+            <GlassCard glow accent={colors.lime} style={styles.reminder}>
+              <Ionicons name="notifications" size={20} color={colors.lime} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.reminderTitle}>Log today's biometrics</Text>
+                <Text style={styles.reminderSub}>Keep your streak alive and mint tokens.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </GlassCard>
+          </TouchableOpacity>
+        )}
 
         {/* Hero balance */}
         <GlassCard glow accent={colors.cyan} style={styles.hero}>
@@ -153,6 +184,10 @@ const styles = StyleSheet.create({
   eyebrow: { color: colors.cyan, fontSize: font.tiny, fontWeight: "800", letterSpacing: 2 },
   hello: { color: colors.text, fontSize: font.h2, fontWeight: "800", marginTop: 2 },
   logoutBtn: { padding: 10, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.stroke },
+
+  reminder: { flexDirection: "row", alignItems: "center", marginBottom: space.md },
+  reminderTitle: { color: colors.text, fontSize: font.body, fontWeight: "700" },
+  reminderSub: { color: colors.textMuted, fontSize: font.tiny, marginTop: 2 },
 
   hero: { marginBottom: space.md },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
