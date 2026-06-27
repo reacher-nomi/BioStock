@@ -82,6 +82,9 @@ export default function LogScreen() {
               </Text>
               <Text style={styles.resultTokens}>+{result.tokens_earned} HT minted</Text>
               <Text style={styles.resultCompliance}>{result.compliance_rate}% compliance</Text>
+              {result.delta_bonus > 0 && (
+                <Text style={styles.resultDelta}>⚡ +{result.delta_bonus} HT improvement bonus</Text>
+              )}
             </GlassCard>
           )}
 
@@ -121,6 +124,7 @@ const styles = StyleSheet.create({
   resultZone: { fontSize: font.h2, fontWeight: "900", letterSpacing: 1 },
   resultTokens: { color: colors.lime, fontSize: font.h3, fontWeight: "800", marginTop: 6 },
   resultCompliance: { color: colors.textMuted, fontSize: font.small, marginTop: 4 },
+  resultDelta: { color: colors.lime, fontSize: font.small, fontWeight: "700", marginTop: 8 },
 
   button: { backgroundColor: colors.cyan, borderRadius: radius.md, padding: 16, alignItems: "center" },
   buttonDisabled: { backgroundColor: colors.cyanDim, opacity: 0.5 },
