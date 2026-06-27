@@ -8,6 +8,7 @@ const ICONS = {
   log: "pulse",
   portfolio: "stats-chart",
   stake: "trending-up",
+  wallet: "wallet",
 };
 
 export default function TabLayout() {
@@ -41,6 +42,7 @@ export default function TabLayout() {
       <Tabs.Screen name="log" options={{ title: "Log" }} />
       <Tabs.Screen name="portfolio" options={{ title: "Portfolio" }} />
       <Tabs.Screen name="stake" options={{ title: "Stake" }} />
+      <Tabs.Screen name="wallet" options={{ title: "Wallet" }} />
     </Tabs>
   );
 }

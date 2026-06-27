@@ -19,6 +19,22 @@ def get_balance(db: Session = Depends(get_db), user_id: int = Depends(verify_tok
     return {"user_id": user_id, "balance": balance}
 
 
+@router.get("/ledger")
+def get_ledger(limit: int = 50, db: Session = Depends(get_db), user_id: int = Depends(verify_token)):
+    """Full token transaction history (rewards minted, stakes burned, refunds)."""
+    entries = TokenEngine.get_ledger_history(user_id, db, limit=limit)
+    return [
+        {
+            "id": e.id,
+            "amount": e.amount,
+            "transaction_type": e.transaction_type,
+            "reason": e.reason,
+            "created_at": e.created_at.isoformat(),
+        }
+        for e in entries
+    ]
+
+
 @router.post("/stake", response_model=GoalResponse)
 def stake_tokens(goal: GoalCreate, db: Session = Depends(get_db), user_id: int = Depends(verify_token)):
     balance = TokenEngine.get_balance(user_id, db)
