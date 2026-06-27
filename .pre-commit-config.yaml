@@ -1,0 +1,28 @@
+# Run lint, format, and the backend test suite before every commit.
+# Install once with:  pip install pre-commit && pre-commit install
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^bio-stock-api/
+      - id: ruff-format
+        files: ^bio-stock-api/
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-added-large-files
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: backend tests
+        entry: bash -c 'cd bio-stock-api && python -m pytest -q'
+        language: system
+        pass_filenames: false
+        files: ^bio-stock-api/

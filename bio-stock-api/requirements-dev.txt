@@ -1,0 +1,5 @@
+# Developer tooling (linting, hooks, security scanning). Runtime deps are in requirements.txt.
+-r requirements.txt
+ruff
+pre-commit
+pip-audit

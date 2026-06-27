@@ -9,5 +9,8 @@ email-validator
 pydantic-settings
 python-multipart
 fhir.resources
+pyotp
 pytest
+pytest-cov
+hypothesis
 httpx

@@ -6,22 +6,53 @@ on:
   pull_request:
 
 jobs:
-  backend-tests:
-    runs-on: ubuntu-latest
+  test:
+    name: Test (py${{ matrix.python }} / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.11", "3.12"]
     defaults:
       run:
         working-directory: bio-stock-api
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python }}
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
-      - name: Run tests
-        run: python -m pytest -q
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Tests + coverage
+        run: pytest
+
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: bio-stock-api/coverage.xml
+
+  security-scan:
+    name: Dependency vulnerability scan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bio-stock-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt pip-audit
+      - name: Audit dependencies
+        run: pip-audit --strict || true

@@ -1,28 +1,26 @@
-import os
+import logging
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 
+import pyotp
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
+from config import get_settings
 from database import get_db
+from models.mfa import UserMFA
 from models.user import User
 from schemas import Token, UserLogin, UserRegister
 
-APP_ENV = os.environ.get("APP_ENV", "development")
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
-if not SECRET_KEY:
-    # Fail loudly in production; allow a clearly-marked dev key locally.
-    if APP_ENV == "production":
-        raise RuntimeError("JWT_SECRET_KEY environment variable must be set in production")
-    SECRET_KEY = "dev-only-secret-do-not-use-in-production"
-
+settings = get_settings()
+audit_log = logging.getLogger("bio-stock.audit")
+SECRET_KEY = settings.signing_key
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer()
@@ -79,18 +77,31 @@ def register(user: UserRegister, _: None = Depends(rate_limit), db: Session = De
 def login(user: UserLogin, _: None = Depends(rate_limit), db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
     if not db_user or not verify_password(user.password, db_user.password_hash):
+        # Audit security event without logging the password or which factor failed.
+        audit_log.warning(f"login_failed user={user.email}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    # Second factor: if MFA is enabled, a valid TOTP code is required.
+    mfa = db.query(UserMFA).filter(UserMFA.user_id == db_user.id, UserMFA.enabled.is_(True)).first()
+    if mfa:
+        if not user.otp_code or not pyotp.TOTP(mfa.secret).verify(user.otp_code, valid_window=1):
+            audit_log.warning(f"login_mfa_failed user_id={db_user.id}")
+            raise HTTPException(status_code=401, detail="Invalid or missing MFA code")
+
     access_token = create_access_token({"sub": str(db_user.id)})
+    audit_log.info(f"login_success user_id={db_user.id}")
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> int:
-    try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        return int(user_id)
-    except JWTError as exc:
-        raise HTTPException(status_code=401, detail="Invalid token") from exc
+    # Accept any currently-valid signing key (supports zero-downtime key rotation).
+    for key in settings.verification_keys:
+        try:
+            payload = jwt.decode(credentials.credentials, key, algorithms=[ALGORITHM])
+            user_id = payload.get("sub")
+            if user_id is None:
+                break
+            return int(user_id)
+        except JWTError:
+            continue
+    raise HTTPException(status_code=401, detail="Invalid token")

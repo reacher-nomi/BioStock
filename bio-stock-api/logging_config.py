@@ -7,6 +7,7 @@ are ever logged.
 import contextvars
 import json
 import logging
+import re
 import sys
 import time
 import uuid
@@ -16,6 +17,19 @@ from starlette.middleware.base import BaseHTTPMiddleware
 # Correlation id for the current request, available to every log record.
 request_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
 
+# HIPAA-oriented redaction: never let secrets / PHI reach the logs.
+_REDACT_PATTERNS = [
+    (re.compile(r'("?password"?\s*[:=]\s*)"?[^",}\s]+', re.I), r"\1***"),
+    (re.compile(r'("?(?:access_token|token|authorization|secret)"?\s*[:=]\s*)"?[^",}\s]+', re.I), r"\1***"),
+    (re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+"), "***@***"),  # emails (PII)
+]
+
+
+def _redact(message: str) -> str:
+    for pattern, repl in _REDACT_PATTERNS:
+        message = pattern.sub(repl, message)
+    return message
+
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -24,7 +38,7 @@ class JsonFormatter(logging.Formatter):
             "level": record.levelname,
             "logger": record.name,
             "request_id": request_id_ctx.get(),
-            "message": record.getMessage(),
+            "message": _redact(record.getMessage()),
         }
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)

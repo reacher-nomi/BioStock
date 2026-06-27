@@ -1,22 +1,34 @@
 import logging
-import os
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from config import get_settings
 from database import Base, engine
 from logging_config import RequestLoggingMiddleware, configure_logging
 from models import Goal, HealthLog, TokenLedger, User  # noqa: F401
-from routes import auth, dashboard, fhir, health, tokens
+from routes import auth, dashboard, fhir, health, mfa, tokens
 
 configure_logging()
 logger = logging.getLogger("bio-stock")
+settings = get_settings()  # validates configuration at startup
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Bio-Stock API", version="1.0")
 app.add_middleware(RequestLoggingMiddleware)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    if settings.is_production:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 
 @app.exception_handler(Exception)
@@ -25,13 +37,9 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     logger.exception(f"Unhandled error on {request.method} {request.url.path}")
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
-# Restrict CORS to known origins. Override with a comma-separated CORS_ORIGINS env var.
-_default_origins = "http://localhost:8081,http://localhost:19006,http://localhost:3000"
-allowed_origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", _default_origins).split(",") if o.strip()]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=settings.origins_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
@@ -42,6 +50,7 @@ app.include_router(health.router)
 app.include_router(tokens.router)
 app.include_router(dashboard.router)
 app.include_router(fhir.router)
+app.include_router(mfa.router)
 
 
 @app.get("/")

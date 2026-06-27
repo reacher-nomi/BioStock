@@ -21,26 +21,55 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+// --- Circuit breaker ---------------------------------------------------------
+// After repeated transient failures the breaker "opens" and fails fast for a
+// cooldown, so the app degrades gracefully instead of hammering a dead backend.
+const FAILURE_THRESHOLD = 4;
+const COOLDOWN_MS = 10000;
+const breaker = { failures: 0, openUntil: 0 };
+
+function recordSuccess() { breaker.failures = 0; breaker.openUntil = 0; }
+function recordFailure() {
+  breaker.failures += 1;
+  if (breaker.failures >= FAILURE_THRESHOLD) {
+    breaker.openUntil = Date.now() + COOLDOWN_MS;
+  }
+}
+function circuitOpen() { return Date.now() < breaker.openUntil; }
+
+api.interceptors.request.use((config) => {
+  if (circuitOpen()) {
+    return Promise.reject(new Error("Service temporarily unavailable. Please retry shortly."));
+  }
+  return config;
+});
+
 // Fault tolerance: retry transient failures (network errors / 5xx) up to
 // 3 times with exponential backoff (300ms, 600ms, 1200ms). 4xx are not retried.
 const MAX_RETRIES = 3;
 
-api.interceptors.response.use(undefined, async (error) => {
-  const config = error.config;
-  if (!config) return Promise.reject(error);
+api.interceptors.response.use(
+  (response) => { recordSuccess(); return response; },
+  async (error) => {
+    const config = error.config;
+    if (!config) return Promise.reject(error);
 
-  const status = error.response?.status;
-  const isTransient = status === undefined || status >= 500;
-  config._retryCount = config._retryCount || 0;
+    const status = error.response?.status;
+    const isTransient = status === undefined || status >= 500;
+    config._retryCount = config._retryCount || 0;
 
-  if (!isTransient || config._retryCount >= MAX_RETRIES) {
-    return Promise.reject(error);
+    if (!isTransient) { recordSuccess(); return Promise.reject(error); }
+
+    if (config._retryCount >= MAX_RETRIES) {
+      recordFailure();
+      return Promise.reject(error);
+    }
+
+    config._retryCount += 1;
+    const delay = 300 * 2 ** (config._retryCount - 1);
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    return api(config);
   }
-
-  config._retryCount += 1;
-  const delay = 300 * 2 ** (config._retryCount - 1);
-  await new Promise((resolve) => setTimeout(resolve, delay));
-  return api(config);
-});
+);
 
 export default api;

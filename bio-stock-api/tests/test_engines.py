@@ -11,12 +11,16 @@ def test_classify_metric_in_and_out_of_range():
 
 
 def test_evaluate_daily_log_zones():
-    green = evaluate_daily_log({"systolic_bp": 115, "diastolic_bp": 75, "steps": 9000, "sleep_hours": 8, "resting_hr": 60})
+    green = evaluate_daily_log(
+        {"systolic_bp": 115, "diastolic_bp": 75, "steps": 9000, "sleep_hours": 8, "resting_hr": 60}
+    )
     assert green["zone"] == "green"
     assert green["tokens_earned"] == 10
     assert green["compliance_rate"] == 100.0
 
-    red = evaluate_daily_log({"systolic_bp": 180, "diastolic_bp": 130, "steps": 100, "sleep_hours": 2, "resting_hr": 200})
+    red = evaluate_daily_log(
+        {"systolic_bp": 180, "diastolic_bp": 130, "steps": 100, "sleep_hours": 2, "resting_hr": 200}
+    )
     assert red["zone"] == "red"
     assert red["tokens_earned"] == 0
 
@@ -29,9 +33,12 @@ def test_streak_bonus_multipliers():
 
 
 def test_validator_rejects_impossible_and_all_zero():
-    assert validate_health_log({"systolic_bp": 0, "diastolic_bp": 0, "steps": 0, "sleep_hours": 0, "resting_hr": 0}) is False
-    assert validate_health_log({"systolic_bp": 9999, "diastolic_bp": 70, "steps": 1, "sleep_hours": 8, "resting_hr": 60}) is False
-    assert validate_health_log({"systolic_bp": 115, "diastolic_bp": 75, "steps": 9000, "sleep_hours": 8, "resting_hr": 60}) is True
+    all_zero = {"systolic_bp": 0, "diastolic_bp": 0, "steps": 0, "sleep_hours": 0, "resting_hr": 0}
+    impossible = {"systolic_bp": 9999, "diastolic_bp": 70, "steps": 1, "sleep_hours": 8, "resting_hr": 60}
+    healthy = {"systolic_bp": 115, "diastolic_bp": 75, "steps": 9000, "sleep_hours": 8, "resting_hr": 60}
+    assert validate_health_log(all_zero) is False
+    assert validate_health_log(impossible) is False
+    assert validate_health_log(healthy) is True
 
 
 def test_delta_bonus_rewards_improvement_only():

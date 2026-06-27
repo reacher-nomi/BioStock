@@ -43,7 +43,10 @@ def get_dashboard(db: Session = Depends(get_db), user_id: int = Depends(verify_t
         "today_zone": today_zone,
         "recent_logs": [{"date": str(log.date), "zone": log.zone, "tokens": log.tokens_earned} for log in recent_logs],
         "active_goals": [
-            {"id": g.id, "name": g.goal_name, "stake_amount": g.stake_amount, "days_remaining": (g.end_date - today).days}
+            {
+                "id": g.id, "name": g.goal_name, "stake_amount": g.stake_amount,
+                "days_remaining": (g.end_date - today).days,
+            }
             for g in active_goals
         ],
     }

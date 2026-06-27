@@ -19,6 +19,11 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    otp_code: str | None = None  # required if the account has MFA enabled
+
+
+class MFAVerify(BaseModel):
+    code: str
 
 
 class Token(BaseModel):

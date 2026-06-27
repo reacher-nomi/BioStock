@@ -75,3 +75,29 @@ def test_fhir_patient_resource(auth_client):
     r = auth_client.get("/fhir/Patient/me")
     assert r.status_code == 200
     assert r.json()["resourceType"] == "Patient"
+
+
+def test_mfa_setup_enable_and_enforced_login(client):
+    import pyotp
+
+    # Register + authenticate.
+    token = client.post("/auth/register", json={"email": "m@m.com", "password": "password1"}).json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Enroll and enable MFA.
+    secret = client.post("/auth/mfa/setup", headers=headers).json()["secret"]
+    code = pyotp.TOTP(secret).now()
+    assert client.post("/auth/mfa/verify", json={"code": code}, headers=headers).json()["enabled"] is True
+
+    # Login without a code is now rejected; with a valid code it succeeds.
+    assert client.post("/auth/login", json={"email": "m@m.com", "password": "password1"}).status_code == 401
+    ok = client.post("/auth/login", json={
+        "email": "m@m.com", "password": "password1", "otp_code": pyotp.TOTP(secret).now(),
+    })
+    assert ok.status_code == 200
+
+
+def test_security_headers_present(client):
+    r = client.get("/healthcheck")
+    assert r.headers.get("X-Content-Type-Options") == "nosniff"
+    assert r.headers.get("X-Frame-Options") == "DENY"
