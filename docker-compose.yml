@@ -1,0 +1,30 @@
+services:
+  api:
+    build: ./bio-stock-api
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: development
+      # Demo secret — generate a real one for production:
+      #   python -c "import secrets; print(secrets.token_urlsafe(48))"
+      JWT_SECRET_KEY: docker-demo-secret-change-me
+      CORS_ORIGINS: http://localhost:19006,http://localhost:8081
+      DATABASE_URL: sqlite:////app/data/biostock.db
+    volumes:
+      # Persist only the SQLite DB across restarts (not the code).
+      - api-data:/app/data
+    restart: unless-stopped
+
+  web:
+    build: ./bio-stock-app
+    ports:
+      - "19006:19006"
+      - "8081:8081"
+    environment:
+      EXPO_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  api-data:

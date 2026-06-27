@@ -2,10 +2,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Platform } from "react-native";
 
-// Use 10.0.2.2 for Android Emulator to connect to host machine's localhost
-const baseURL = Platform.OS === "android"
-  ? "http://10.0.2.2:8000"
-  : "http://localhost:8000";
+// Allow an explicit override (used by the web/Docker build); otherwise use
+// 10.0.2.2 for the Android emulator and localhost everywhere else.
+const baseURL =
+  process.env.EXPO_PUBLIC_API_URL ||
+  (Platform.OS === "android" ? "http://10.0.2.2:8000" : "http://localhost:8000");
 
 const api = axios.create({
   baseURL,

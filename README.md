@@ -1,36 +1,80 @@
 # Bio-Stock: Health Gamification Mobile App
 
-Bio-Stock is a mobile prototype where users log daily health metrics, earn tokens, and stake them on short goals.
+Bio-Stock turns daily health metrics into a tradeable token economy. Users log
+blood pressure, steps, sleep, and heart rate; each day is scored as **GREEN /
+YELLOW / RED**; healthy days mint **Health Tokens (HT)**; streaks add
+multipliers; and tokens can be **staked** on short health goals.
 
 ## Stack
-- Frontend: React Native + Expo Router
-- Backend: FastAPI + SQLAlchemy
-- DB: SQLite
-- Auth: JWT
+- **Frontend:** React Native + Expo Router
+- **Backend:** FastAPI + SQLAlchemy
+- **DB:** SQLite
+- **Auth:** JWT
+
+## Features
+- Email/password auth (JWT, bcrypt hashing, login rate limiting)
+- Daily biometric logging with zone classification and compliance scoring
+- Token rewards: GREEN = 10 HT, YELLOW = 3 HT, RED = 0 HT
+- Streak multipliers: 7d ×1.5, 30d ×2, 90d ×3
+- **Δ-improvement bonus** — extra tokens for improving cardiovascular metrics
+  versus a personal baseline
+- Staking on 7-day goals with **automatic resolution** (success refunds the
+  stake, failure forfeits it)
+- **Wallet** — full token transaction ledger (rewards, stakes, refunds)
+- **Portfolio** — cumulative-value chart, zone distribution, baseline progress
+- Dark "liquid glass" UI with bento dashboard and icon navbar
 
 ## Project Structure
-- `bio-stock-api/` backend
-- `bio-stock-app/` mobile app
+```
+bio-stock/
+├── bio-stock-api/      FastAPI backend (models, routes, services)
+├── bio-stock-app/      Expo mobile app (app/, components/, utils/)
+└── docker-compose.yml  Runs API + Expo web together
+```
 
-## Quick Start
+## Run with Docker (recommended for a quick demo)
+Requires Docker Desktop running.
+```bash
+docker compose up --build
+```
+- API → http://localhost:8000 (docs at http://localhost:8000/docs)
+- Web app → http://localhost:19006
+- The API container seeds the demo user on startup.
+
+> Native iOS/Android run on the host, not in Docker — Metro needs direct access
+> to a device/emulator. Use the manual frontend steps below for native.
+
+## Run manually
 
 ### Backend
 ```bash
-cd bio-stock/bio-stock-api
+cd bio-stock-api
 python -m venv venv
-venv\Scripts\activate
+venv\Scripts\activate        # macOS/Linux: source venv/bin/activate
 pip install -r requirements.txt
 python seed_data.py
 uvicorn main:app --reload
 ```
 
-### Frontend
+### Frontend (native)
 ```bash
-cd bio-stock/bio-stock-app
+cd bio-stock-app
 npm install
-npx expo start
+npx expo run:android         # or: npx expo start, then press a / i
 ```
+The app auto-targets `10.0.2.2:8000` on the Android emulator and
+`localhost:8000` elsewhere. Override with the `EXPO_PUBLIC_API_URL` env var.
+
+## Configuration
+Backend env vars (see `bio-stock-api/.env.example`):
+- `APP_ENV` — `development` or `production` (production requires a secret)
+- `JWT_SECRET_KEY` — signing key for JWTs
+- `CORS_ORIGINS` — comma-separated allowed web origins
+- `DATABASE_URL` — SQLAlchemy URL (defaults to local SQLite)
 
 ## Test User
 - Email: `test@test.com`
 - Password: `password`
+
+## API
+See [API_DOCS.md](API_DOCS.md) for the full endpoint reference.
