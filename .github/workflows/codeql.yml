@@ -22,6 +22,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Java/Kotlin from the generated bio-stock-app/android/ folder is
+        # intentionally excluded — it is reproducible scaffolding, not app code.
         include:
           - language: actions
             build-mode: none
