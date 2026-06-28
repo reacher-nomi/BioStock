@@ -5,9 +5,10 @@ services:
       - "8000:8000"
     environment:
       APP_ENV: development
-      # Demo secret — generate a real one for production:
+      # Demo secret — DO NOT commit real secrets. Generate a real one for production:
       #   python -c "import secrets; print(secrets.token_urlsafe(48))"
-      JWT_SECRET_KEY: docker-demo-secret-change-me
+      # Set `JWT_SECRET_KEY` via environment (local `.env` or CI/GitHub Secrets).
+      # JWT_SECRET_KEY: docker-demo-secret-change-me
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:19006,http://localhost:8081}
       DATABASE_URL: sqlite:////app/data/biostock.db
     volumes:

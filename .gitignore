@@ -4,6 +4,8 @@ __pycache__/
 *.pyc
 *.db
 .env
+.env.*
+.secrets.baseline
 
 ### Node / Expo ###
 node_modules/
@@ -36,3 +38,5 @@ coverage.xml
 htmlcov/
 .pytest_cache/
 .ruff_cache/
+# Hypothesis test artifacts
+.hypothesis/
