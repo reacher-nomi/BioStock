@@ -1,26 +1,47 @@
-name: CodeQL
+name: "CodeQL Advanced"
 
 on:
   push:
-    branches: [main, master]
+    branches: ["main", "master"]
   pull_request:
-    branches: [main, master]
+    branches: ["main", "master"]
   schedule:
-    - cron: "0 6 * * 1"  # weekly continuous scan
+    - cron: "41 13 * * 1"
 
 jobs:
   analyze:
+    name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
     permissions:
       security-events: write
+      packages: read
+      actions: read
       contents: read
+
     strategy:
       fail-fast: false
       matrix:
-        language: [python, javascript-typescript]
+        # Java/Kotlin from the generated bio-stock-app/android/ folder is
+        # intentionally excluded — it is reproducible scaffolding, not app code.
+        include:
+          - language: actions
+            build-mode: none
+          - language: javascript-typescript
+            build-mode: none
+          - language: python
+            build-mode: none
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
         with:
-          language: ${{ matrix.language }}
-      - uses: github/codeql-action/analyze@v3
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
