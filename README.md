@@ -100,6 +100,3 @@ FHIR output. Runs automatically on every push via GitHub Actions.
 
 ## API
 See [API_DOCS.md](API_DOCS.md) for the full endpoint reference.
-
-## Evaluation
-See [RUBRIC.md](RUBRIC.md) for how the project maps to each evaluation criterion.
