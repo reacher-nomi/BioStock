@@ -1,0 +1,17 @@
+# Keep the build context small and fast.
+**/node_modules
+**/venv
+**/__pycache__
+**/*.pyc
+.git
+bio-stock-app/android
+bio-stock-app/.expo
+bio-stock-app/dist
+bio-stock-app/web-build
+bio-stock-api/webdist
+bio-stock-api/*.db
+bio-stock-api/.env
+**/.pytest_cache
+**/.ruff_cache
+**/coverage.xml
+**/.coverage

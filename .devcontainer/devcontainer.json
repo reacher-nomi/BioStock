@@ -4,10 +4,9 @@
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
-  "forwardPorts": [8000, 19006],
+  "forwardPorts": [8000],
   "portsAttributes": {
-    "8000": { "label": "Bio-Stock API" },
-    "19006": { "label": "Bio-Stock Web", "onAutoForward": "openPreview" }
+    "8000": { "label": "Bio-Stock", "onAutoForward": "openPreview" }
   },
   "postCreateCommand": "bash .devcontainer/up.sh",
   "remoteUser": "vscode"

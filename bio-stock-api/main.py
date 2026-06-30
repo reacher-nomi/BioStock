@@ -1,8 +1,10 @@
 import logging
+import os
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from config import get_settings
 from database import Base, engine
@@ -53,11 +55,19 @@ app.include_router(fhir.router)
 app.include_router(mfa.router)
 
 
-@app.get("/")
-def read_root():
-    return {"message": "Bio-Stock API running"}
-
-
 @app.get("/healthcheck")
 def health_check():
     return {"status": "ok"}
+
+
+# Serve the built Expo web app from the same origin as the API (single-origin
+# deployment). This is what makes the app work in GitHub Codespaces: the browser
+# only talks to one forwarded, already-authenticated URL, so there is no
+# cross-origin / second-port problem. Mounted last so API routes take priority.
+WEB_DIR = os.environ.get("WEB_DIST_DIR", "webdist")
+if os.path.isdir(WEB_DIR):
+    app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
+else:
+    @app.get("/")
+    def read_root():
+        return {"message": "Bio-Stock API running"}

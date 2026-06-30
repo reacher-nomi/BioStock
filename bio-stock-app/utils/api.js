@@ -2,11 +2,20 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Platform } from "react-native";
 
-// Allow an explicit override (used by the web/Docker build); otherwise use
-// 10.0.2.2 for the Android emulator and localhost everywhere else.
-const baseURL =
-  process.env.EXPO_PUBLIC_API_URL ||
-  (Platform.OS === "android" ? "http://10.0.2.2:8000" : "http://localhost:8000");
+// Resolve the API base URL:
+// - explicit override wins (EXPO_PUBLIC_API_URL)
+// - web: "" (relative / same-origin) — the API serves the web build, so calls
+//   go to the same host. This is what makes Codespaces work (one forwarded port).
+// - Android emulator: host machine via 10.0.2.2
+// - everything else (iOS sim, etc.): localhost
+function resolveBaseURL() {
+  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+  if (Platform.OS === "web") return "";
+  if (Platform.OS === "android") return "http://10.0.2.2:8000";
+  return "http://localhost:8000";
+}
+
+const baseURL = resolveBaseURL();
 
 const api = axios.create({
   baseURL,

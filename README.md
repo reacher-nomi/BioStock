@@ -37,23 +37,22 @@ bio-stock/
 
 ## Run in GitHub Codespaces (zero setup)
 This repo ships a `.devcontainer/`, so opening it in a Codespace
-**automatically builds the Docker images and starts the stack**:
+**automatically builds the image and starts the app**:
 
 1. On the GitHub repo: **Code ▸ Codespaces ▸ Create codespace**.
 2. Wait for the build to finish (it runs `docker compose up --build`).
-3. Open the forwarded **port 19006** for the web app; **port 8000** is the API.
-4. If the web app can't reach the API, set **port 8000** to *Public* in the
-   Ports tab (cross-origin browser calls to a private forwarded port are
-   blocked).
+3. Open the forwarded **port 8000** — that's the whole app.
+
+The API serves the web app on the same port (single-origin), so there is
+nothing to configure between ports and no CORS/public-port step.
 
 ## Run with Docker (recommended for a quick demo)
 Requires Docker Desktop running.
 ```bash
 docker compose up --build
 ```
-- API → http://localhost:8000 (docs at http://localhost:8000/docs)
-- Web app → http://localhost:19006
-- The API container seeds the demo user on startup.
+- App + API → http://localhost:8000 (API docs at http://localhost:8000/docs)
+- The container builds the web bundle, seeds the demo user, and serves both.
 
 > Native iOS/Android run on the host, not in Docker — Metro needs direct access
 > to a device/emulator. Use the manual frontend steps below for native.
