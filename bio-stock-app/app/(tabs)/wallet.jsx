@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Backdrop, GlassCard } from "../../components/Glass";
+import { AnimatedCounter, FadeInView } from "../../components/Motion";
 import api from "../../utils/api";
 import { colors, font, radius, space } from "../../utils/theme";
 
@@ -51,7 +52,7 @@ export default function WalletScreen() {
         <GlassCard glow accent={colors.cyan} style={styles.balanceCard}>
           <Text style={styles.cardLabel}>CURRENT BALANCE</Text>
           <View style={styles.balanceRow}>
-            <Text style={styles.balance}>{balance}</Text>
+            <AnimatedCounter value={balance} style={styles.balance} />
             <Text style={styles.balanceUnit}>HT</Text>
           </View>
           <View style={styles.flowRow}>
@@ -70,22 +71,24 @@ export default function WalletScreen() {
         {ledger.length === 0 ? (
           <GlassCard><Text style={styles.empty}>No transactions yet. Log your biometrics to mint your first tokens.</Text></GlassCard>
         ) : (
-          ledger.map((e) => {
+          ledger.map((e, i) => {
             const m = meta(e.transaction_type);
             const positive = e.amount > 0;
             return (
-              <GlassCard key={e.id} style={styles.txCard}>
-                <View style={[styles.txIcon, { backgroundColor: m.color + "22" }]}>
-                  <Ionicons name={m.icon} size={18} color={m.color} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.txReason} numberOfLines={1}>{e.reason}</Text>
-                  <Text style={styles.txDate}>{m.label} · {String(e.created_at).slice(0, 10)}</Text>
-                </View>
-                <Text style={[styles.txAmount, { color: positive ? colors.green : colors.yellow }]}>
-                  {positive ? "+" : ""}{e.amount} HT
-                </Text>
-              </GlassCard>
+              <FadeInView key={e.id} delay={Math.min(i, 8) * 40}>
+                <GlassCard style={styles.txCard}>
+                  <View style={[styles.txIcon, { backgroundColor: m.color + "22" }]}>
+                    <Ionicons name={m.icon} size={18} color={m.color} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.txReason} numberOfLines={1}>{e.reason}</Text>
+                    <Text style={styles.txDate}>{m.label} · {String(e.created_at).slice(0, 10)}</Text>
+                  </View>
+                  <Text style={[styles.txAmount, { color: positive ? colors.green : colors.yellow }]}>
+                    {positive ? "+" : ""}{e.amount} HT
+                  </Text>
+                </GlassCard>
+              </FadeInView>
             );
           })
         )}

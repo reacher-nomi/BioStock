@@ -3,7 +3,7 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-import { AreaBars, ProportionBar } from "../../components/Charts";
+import { AreaChart, Donut } from "../../components/Charts";
 import { Backdrop, GlassCard } from "../../components/Glass";
 import api from "../../utils/api";
 import { colors, font, radius, space } from "../../utils/theme";
@@ -85,7 +85,7 @@ export default function PortfolioScreen() {
             <Text style={styles.valueUnit}>HT</Text>
           </View>
           {cumulative.length > 0 ? (
-            <AreaBars values={cumulative} color={colors.cyan} height={120} />
+            <AreaChart values={cumulative} color={colors.cyan} height={130} />
           ) : (
             <Text style={styles.empty}>No data in this range.</Text>
           )}
@@ -95,7 +95,7 @@ export default function PortfolioScreen() {
         <GlassCard style={styles.section}>
           <Text style={styles.sectionTitle}>Zone Distribution</Text>
           {history.length > 0 ? (
-            <ProportionBar segments={[
+            <Donut segments={[
               { value: zoneCounts.green || 0, color: colors.green, label: "Green" },
               { value: zoneCounts.yellow || 0, color: colors.yellow, label: "Yellow" },
               { value: zoneCounts.red || 0, color: colors.red, label: "Red" },

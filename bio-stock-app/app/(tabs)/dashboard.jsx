@@ -6,10 +6,15 @@ import {
   Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from "react-native";
 
+import { ProgressRing } from "../../components/Charts";
 import { Backdrop, GlassCard } from "../../components/Glass";
+import { AnimatedCounter, FadeInView, PressableScale } from "../../components/Motion";
 import { Skeleton } from "../../components/Skeleton";
 import api from "../../utils/api";
 import { colors, font, radius, space, zoneColor } from "../../utils/theme";
+
+const ZONE_SCORE = { green: 100, yellow: 60, red: 25 };
+const scoreColor = (s) => (s >= 80 ? colors.green : s >= 50 ? colors.yellow : colors.red);
 
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
@@ -68,6 +73,12 @@ export default function DashboardScreen() {
   const goals = data?.active_goals ?? [];
   const name = (data?.user_email || "").split("@")[0];
 
+  // Health Score: zone-weighted average of recent days (0–100).
+  const scored = recent.filter((l) => ZONE_SCORE[(l.zone || "").toLowerCase()] != null);
+  const healthScore = scored.length
+    ? Math.round(scored.reduce((s, l) => s + ZONE_SCORE[l.zone.toLowerCase()], 0) / scored.length)
+    : (zone ? ZONE_SCORE[zone.toLowerCase()] : 0);
+
   return (
     <Backdrop>
       <ScrollView
@@ -90,7 +101,7 @@ export default function DashboardScreen() {
 
         {/* Reminder to log today */}
         {!zone && (
-          <TouchableOpacity onPress={() => router.push("/(tabs)/log")} activeOpacity={0.8}>
+          <PressableScale onPress={() => router.push("/(tabs)/log")}>
             <GlassCard glow accent={colors.lime} style={styles.reminder}>
               <Ionicons name="notifications" size={20} color={colors.lime} />
               <View style={{ flex: 1, marginLeft: 12 }}>
@@ -99,27 +110,37 @@ export default function DashboardScreen() {
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </GlassCard>
-          </TouchableOpacity>
+          </PressableScale>
         )}
 
-        {/* Hero balance */}
-        <GlassCard glow accent={colors.cyan} style={styles.hero}>
-          <View style={styles.rowBetween}>
-            <Text style={styles.cardLabel}>HEALTH TOKEN BALANCE</Text>
-            <Ionicons name="wallet-outline" size={18} color={colors.cyan} />
-          </View>
-          <View style={styles.balanceRow}>
-            <Text style={styles.balance}>{data?.token_balance ?? 0}</Text>
-            <Text style={styles.balanceUnit}>HT</Text>
-          </View>
-          <Text style={styles.heroSub}>Staked on lowering your biological risk</Text>
-        </GlassCard>
+        {/* Health Score ring hero */}
+        <FadeInView delay={0}>
+          <GlassCard glow accent={scoreColor(healthScore)} style={styles.hero}>
+            <View style={styles.ringRow}>
+              <ProgressRing size={140} strokeWidth={13} progress={healthScore} color={scoreColor(healthScore)}>
+                <AnimatedCounter value={healthScore} style={[styles.scoreValue, { color: scoreColor(healthScore) }]} />
+                <Text style={styles.scoreLabel}>HEALTH SCORE</Text>
+              </ProgressRing>
+              <View style={styles.ringSide}>
+                <Text style={styles.cardLabel}>TOKEN BALANCE</Text>
+                <View style={styles.balanceRow}>
+                  <AnimatedCounter value={data?.token_balance ?? 0} style={styles.balance} />
+                  <Text style={styles.balanceUnit}>HT</Text>
+                </View>
+                <View style={styles.streakPill}>
+                  <Ionicons name="flame" size={14} color={colors.lime} />
+                  <Text style={styles.streakPillText}>{data?.current_streak ?? 0} day streak</Text>
+                </View>
+              </View>
+            </View>
+          </GlassCard>
+        </FadeInView>
 
         {/* Bento row: streak + today zone */}
-        <View style={styles.bentoRow}>
+        <FadeInView delay={80} style={styles.bentoRow}>
           <GlassCard style={styles.bentoHalf} glow accent={colors.lime}>
             <Ionicons name="flame" size={22} color={colors.lime} />
-            <Text style={styles.bentoValue}>{data?.current_streak ?? 0}</Text>
+            <AnimatedCounter value={data?.current_streak ?? 0} style={styles.bentoValue} />
             <Text style={styles.bentoLabel}>Day Streak</Text>
           </GlassCard>
 
@@ -130,10 +151,11 @@ export default function DashboardScreen() {
             </Text>
             <Text style={styles.bentoLabel}>Today's Zone</Text>
           </GlassCard>
-        </View>
+        </FadeInView>
 
         {/* Weekly activity */}
-        <GlassCard style={styles.section}>
+        <FadeInView delay={160} style={styles.section}>
+        <GlassCard>
           <Text style={styles.sectionTitle}>This Week</Text>
           {recent.length === 0 ? (
             <Text style={styles.empty}>No logs yet — head to the Log tab.</Text>
@@ -148,9 +170,11 @@ export default function DashboardScreen() {
             </View>
           )}
         </GlassCard>
+        </FadeInView>
 
         {/* Active goals */}
-        <GlassCard style={styles.section}>
+        <FadeInView delay={240} style={styles.section}>
+        <GlassCard>
           <View style={styles.rowBetween}>
             <Text style={styles.sectionTitle}>Active Stakes</Text>
             <Text style={styles.countBadge}>{goals.length}</Text>
@@ -170,6 +194,7 @@ export default function DashboardScreen() {
             ))
           )}
         </GlassCard>
+        </FadeInView>
 
         <View style={{ height: 90 }} />
       </ScrollView>
@@ -190,12 +215,17 @@ const styles = StyleSheet.create({
   reminderSub: { color: colors.textMuted, fontSize: font.tiny, marginTop: 2 },
 
   hero: { marginBottom: space.md },
+  ringRow: { flexDirection: "row", alignItems: "center", gap: 18 },
+  ringSide: { flex: 1 },
+  scoreValue: { fontSize: 36, fontWeight: "900" },
+  scoreLabel: { color: colors.textMuted, fontSize: 9, fontWeight: "800", letterSpacing: 1.5, marginTop: 2 },
+  streakPill: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 12, alignSelf: "flex-start", backgroundColor: colors.surfaceStrong, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill },
+  streakPillText: { color: colors.lime, fontSize: font.tiny, fontWeight: "700" },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   cardLabel: { color: colors.textMuted, fontSize: font.tiny, fontWeight: "700", letterSpacing: 1.5 },
-  balanceRow: { flexDirection: "row", alignItems: "flex-end", marginTop: 10 },
-  balance: { color: colors.white, fontSize: 52, fontWeight: "900", lineHeight: 56 },
-  balanceUnit: { color: colors.cyan, fontSize: font.h3, fontWeight: "800", marginLeft: 8, marginBottom: 8 },
-  heroSub: { color: colors.textFaint, fontSize: font.small, marginTop: 6 },
+  balanceRow: { flexDirection: "row", alignItems: "flex-end", marginTop: 8 },
+  balance: { color: colors.white, fontSize: 40, fontWeight: "900", lineHeight: 42 },
+  balanceUnit: { color: colors.cyan, fontSize: font.body, fontWeight: "800", marginLeft: 6, marginBottom: 5 },
 
   bentoRow: { flexDirection: "row", gap: space.md, marginBottom: space.md },
   bentoHalf: { flex: 1, padding: 16 },
