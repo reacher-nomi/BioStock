@@ -2,10 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
-  StyleSheet, Text, TextInput, TouchableOpacity, View,
+  StyleSheet, Text, TextInput, View,
 } from "react-native";
 
 import { Backdrop, GlassCard } from "../../components/Glass";
+import { PressableScale } from "../../components/Motion";
 import api from "../../utils/api";
 import { colors, font, radius, space, zoneColor } from "../../utils/theme";
 import { showToast } from "../../utils/toast";
@@ -90,7 +91,7 @@ export default function LogScreen() {
             </GlassCard>
           )}
 
-          <TouchableOpacity
+          <PressableScale
             style={[styles.button, !filled && styles.buttonDisabled]}
             onPress={onSubmit}
             disabled={!filled || loading}
@@ -98,7 +99,7 @@ export default function LogScreen() {
             {loading ? <ActivityIndicator color={colors.bg} /> : (
               <Text style={styles.buttonText}>Submit & Mint Tokens</Text>
             )}
-          </TouchableOpacity>
+          </PressableScale>
           <View style={{ height: 90 }} />
         </ScrollView>
       </KeyboardAvoidingView>

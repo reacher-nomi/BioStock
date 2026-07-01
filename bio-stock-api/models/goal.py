@@ -13,6 +13,9 @@ class Goal(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     goal_name = Column(String, nullable=False)
     stake_amount = Column(Integer, nullable=False)
+    # The win condition: how many GREEN days are required within the window.
+    target_green_days = Column(Integer, nullable=False, default=5)
+    duration_days = Column(Integer, nullable=False, default=7)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     status = Column(String, nullable=False, default="ACTIVE")

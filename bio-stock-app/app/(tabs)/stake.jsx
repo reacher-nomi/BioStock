@@ -6,6 +6,7 @@ import {
 } from "react-native";
 
 import { Backdrop, GlassCard } from "../../components/Glass";
+import { FadeInView, PressableScale } from "../../components/Motion";
 import api from "../../utils/api";
 import { colors, font, radius, space } from "../../utils/theme";
 import { showToast } from "../../utils/toast";
@@ -88,30 +89,47 @@ export default function StakeScreen() {
           </View>
         )}
 
-        <TouchableOpacity style={[styles.button, insufficient && styles.buttonDisabled]}
-          onPress={stake} disabled={insufficient || loading}>
+        {/* Live payoff preview */}
+        {!insufficient && Number(stakeAmount) > 0 && (
+          <View style={styles.payoffRow}>
+            <Text style={styles.payoffText}>
+              Win → <Text style={{ color: colors.green }}>+{Math.round(Number(stakeAmount) * 0.2)} HT</Text> ·
+              {" "}Lose → <Text style={{ color: colors.red }}>−{stakeAmount} HT</Text>
+            </Text>
+          </View>
+        )}
+
+        <PressableScale onPress={stake} disabled={insufficient || loading}
+          style={[styles.button, insufficient && styles.buttonDisabled]}>
           {loading ? <ActivityIndicator color={colors.bg} /> : (
             <Text style={styles.buttonText}>{insufficient ? "Insufficient Balance" : `Lock ${stakeAmount} HT`}</Text>
           )}
-        </TouchableOpacity>
+        </PressableScale>
 
         <Text style={styles.sectionTitle}>Your Stakes</Text>
         {goals.length === 0 ? (
           <Text style={styles.empty}>No stakes yet. Commit tokens to a goal above.</Text>
         ) : (
-          goals.map((g) => (
-            <GlassCard key={g.id} style={styles.goalCard}>
-              <View style={styles.goalTop}>
-                <Text style={styles.goalName}>{g.goal_name}</Text>
-                <View style={[styles.statusBadge, { borderColor: statusColor(g.status) }]}>
-                  <Text style={[styles.statusText, { color: statusColor(g.status) }]}>{g.status}</Text>
+          goals.map((g, i) => (
+            <FadeInView key={g.id} delay={Math.min(i, 6) * 50}>
+              <GlassCard style={styles.goalCard}>
+                <View style={styles.goalTop}>
+                  <Text style={styles.goalName}>{g.goal_name}</Text>
+                  <View style={[styles.statusBadge, { borderColor: statusColor(g.status) }]}>
+                    <Text style={[styles.statusText, { color: statusColor(g.status) }]}>{g.status}</Text>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.goalBottom}>
-                <Text style={styles.goalStake}>{g.stake_amount} HT staked</Text>
-                {g.status === "ACTIVE" && <Text style={styles.goalDays}>{g.days_remaining}d left</Text>}
-              </View>
-            </GlassCard>
+                <Text style={styles.goalTarget}>
+                  Target: {g.target_green_days} green days in {g.duration_days}
+                </Text>
+                <View style={styles.goalBottom}>
+                  <Text style={styles.goalStake}>{g.stake_amount} HT staked</Text>
+                  {g.status === "ACTIVE"
+                    ? <Text style={styles.goalReward}>win {g.expected_reward} HT · {g.days_remaining}d left</Text>
+                    : <Text style={styles.goalReward}>win {g.expected_reward} HT</Text>}
+                </View>
+              </GlassCard>
+            </FadeInView>
           ))
         )}
         <View style={{ height: 90 }} />
@@ -143,6 +161,8 @@ const styles = StyleSheet.create({
   errorBox: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: space.md },
   error: { color: colors.red, fontSize: font.small },
 
+  payoffRow: { alignItems: "center", marginBottom: 10 },
+  payoffText: { color: colors.textMuted, fontSize: font.small, fontWeight: "600" },
   button: { backgroundColor: colors.lime, borderRadius: radius.md, padding: 16, alignItems: "center", marginBottom: space.xl },
   buttonDisabled: { backgroundColor: colors.surfaceStrong },
   buttonText: { color: colors.bg, fontWeight: "900", fontSize: font.body },
@@ -154,7 +174,8 @@ const styles = StyleSheet.create({
   goalName: { color: colors.text, fontSize: font.body, fontWeight: "700", flex: 1 },
   statusBadge: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 3 },
   statusText: { fontSize: font.tiny, fontWeight: "800" },
+  goalTarget: { color: colors.textMuted, fontSize: font.tiny, marginTop: 6 },
   goalBottom: { flexDirection: "row", justifyContent: "space-between", marginTop: 8 },
   goalStake: { color: colors.lime, fontSize: font.small, fontWeight: "700" },
-  goalDays: { color: colors.textFaint, fontSize: font.small },
+  goalReward: { color: colors.textFaint, fontSize: font.small },
 });

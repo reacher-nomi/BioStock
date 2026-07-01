@@ -7,7 +7,7 @@ from database import get_db
 from models.goal import Goal
 from routes.auth import verify_token
 from schemas import GoalCreate, GoalResponse, TokenBalance
-from services.goal_engine import resolve_due_goals
+from services.goal_engine import resolve_due_goals, reward_for
 from services.token_engine import TokenEngine
 
 router = APIRouter(prefix="/tokens", tags=["tokens"])
@@ -41,12 +41,17 @@ def stake_tokens(goal: GoalCreate, db: Session = Depends(get_db), user_id: int =
     if balance < goal.stake_amount:
         raise HTTPException(status_code=400, detail="Insufficient token balance")
 
+    if goal.target_green_days > goal.duration_days:
+        raise HTTPException(status_code=400, detail="Target green days cannot exceed the goal duration")
+
     start_date = date.today()
-    end_date = start_date + timedelta(days=7)
+    end_date = start_date + timedelta(days=goal.duration_days)
     new_goal = Goal(
         user_id=user_id,
         goal_name=goal.goal_name,
         stake_amount=goal.stake_amount,
+        target_green_days=goal.target_green_days,
+        duration_days=goal.duration_days,
         start_date=start_date,
         end_date=end_date,
         status="ACTIVE",
@@ -76,6 +81,9 @@ def get_goals(db: Session = Depends(get_db), user_id: int = Depends(verify_token
             "id": g.id,
             "goal_name": g.goal_name,
             "stake_amount": g.stake_amount,
+            "target_green_days": g.target_green_days,
+            "duration_days": g.duration_days,
+            "expected_reward": reward_for(g.stake_amount),
             "status": g.status,
             "start_date": str(g.start_date),
             "end_date": str(g.end_date),

@@ -1,12 +1,12 @@
 // Bio-Stock design tokens — derived from the pitch deck brand language.
 export const colors = {
-  // Deep navy / near-black backgrounds
-  bg: "#06090F",
-  bgElevated: "#0B111C",
-  surface: "rgba(255,255,255,0.04)",
-  surfaceStrong: "rgba(255,255,255,0.07)",
-  stroke: "rgba(255,255,255,0.10)",
-  strokeStrong: "rgba(255,255,255,0.18)",
+  // Deep navy backgrounds — a touch lighter/airier than pure black
+  bg: "#0B1220",
+  bgElevated: "#141E30",
+  surface: "rgba(255,255,255,0.06)",
+  surfaceStrong: "rgba(255,255,255,0.11)",
+  stroke: "rgba(255,255,255,0.14)",
+  strokeStrong: "rgba(255,255,255,0.22)",
 
   // Accents
   cyan: "#22D3EE",
@@ -20,10 +20,10 @@ export const colors = {
   yellow: "#F5D547",
   red: "#FF5C7A",
 
-  // Text
-  text: "#F4F8FF",
-  textMuted: "#8A97AD",
-  textFaint: "#5C677D",
+  // Text — brighter muted tones for an airier feel
+  text: "#F6F9FF",
+  textMuted: "#A6B3C9",
+  textFaint: "#71809A",
 
   white: "#FFFFFF",
 };

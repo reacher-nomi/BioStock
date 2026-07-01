@@ -35,6 +35,21 @@ def client():
 
 
 @pytest.fixture
+def db_session():
+    """A standalone DB session on a fresh in-memory database, for unit tests."""
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(bind=engine)
+    Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    db = Session()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@pytest.fixture
 def auth_client(client):
     """A client already registered + authenticated as a test user."""
     res = client.post("/auth/register", json={"email": "t@t.com", "password": "password1"})

@@ -57,6 +57,8 @@ class TokenBalance(BaseModel):
 class GoalCreate(BaseModel):
     goal_name: str = Field(min_length=1, max_length=100)
     stake_amount: int = Field(gt=0, le=1_000_000)
+    duration_days: int = Field(default=7, ge=3, le=30)
+    target_green_days: int = Field(default=5, ge=1, le=30)
 
 
 class GoalResponse(BaseModel):
