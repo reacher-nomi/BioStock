@@ -11,16 +11,18 @@ import api from "../../utils/api";
 import { colors, font, radius, space } from "../../utils/theme";
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState("test@test.com");
-  const [password, setPassword] = useState("password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleLogin = async () => {
+  const login = async (emailValue, passwordValue) => {
+    if (!emailValue || !passwordValue) { setError("Enter your email and password."); return; }
     setLoading(true); setError("");
     try {
-      const response = await api.post("/auth/login", { email, password });
+      const response = await api.post("/auth/login", { email: emailValue, password: passwordValue });
       await AsyncStorage.setItem("access_token", response.data.access_token);
       router.replace("/(tabs)/dashboard");
     } catch (err) {
@@ -29,6 +31,9 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
+  const handleLogin = () => login(email, password);
+  const handleDemo = () => { setEmail("test@test.com"); setPassword("password"); login("test@test.com", "password"); };
 
   return (
     <Backdrop>
@@ -47,13 +52,22 @@ export default function LoginScreen() {
             autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
 
           <Text style={[styles.label, { marginTop: 14 }]}>Password</Text>
-          <TextInput style={styles.input} placeholder="••••••••" placeholderTextColor={colors.textFaint}
-            secureTextEntry value={password} onChangeText={setPassword} />
+          <View style={styles.passwordRow}>
+            <TextInput style={styles.passwordInput} placeholder="••••••••" placeholderTextColor={colors.textFaint}
+              secureTextEntry={!showPassword} value={password} onChangeText={setPassword} />
+            <TouchableOpacity onPress={() => setShowPassword((s) => !s)} style={styles.eyeBtn}>
+              <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
 
           {!!error && <Text style={styles.error}>{error}</Text>}
 
           <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
             {loading ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.buttonText}>Sign In</Text>}
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleDemo} disabled={loading} style={styles.demoBtn}>
+            <Text style={styles.demoText}>Try the demo account</Text>
           </TouchableOpacity>
         </GlassCard>
 
@@ -75,9 +89,14 @@ const styles = StyleSheet.create({
   card: { marginBottom: space.lg },
   label: { color: colors.textMuted, fontSize: font.small, fontWeight: "700", marginBottom: 8 },
   input: { backgroundColor: colors.surfaceStrong, borderWidth: 1, borderColor: colors.stroke, borderRadius: radius.sm, padding: 14, color: colors.white, fontSize: font.body },
+  passwordRow: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surfaceStrong, borderWidth: 1, borderColor: colors.stroke, borderRadius: radius.sm },
+  passwordInput: { flex: 1, padding: 14, color: colors.white, fontSize: font.body },
+  eyeBtn: { padding: 14 },
   error: { color: colors.red, fontSize: font.small, marginTop: 12, textAlign: "center" },
   button: { backgroundColor: colors.cyan, borderRadius: radius.md, padding: 16, alignItems: "center", marginTop: 20 },
   buttonText: { color: colors.bg, fontWeight: "900", fontSize: font.body },
+  demoBtn: { alignItems: "center", marginTop: 14 },
+  demoText: { color: colors.textMuted, fontSize: font.small, fontWeight: "600" },
 
   link: { color: colors.textMuted, textAlign: "center", fontSize: font.body },
   linkAccent: { color: colors.lime, fontWeight: "700" },
