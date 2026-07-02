@@ -1,0 +1,11 @@
+node_modules/
+.expo/
+android/
+ios/
+build/
+dist/
+.env
+npm-debug.log*
+yarn-debug.log*
+.vscode/
+.git
