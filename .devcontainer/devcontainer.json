@@ -1,0 +1,23 @@
+{
+  "name": "BioStock",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "overrideCommand": false,
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": {
+      "label": "BioStock app",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  }
+}
