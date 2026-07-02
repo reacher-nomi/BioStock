@@ -3,10 +3,12 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { RedeemSheet } from "../../components/AppSheets";
 import { Backdrop, GlassCard } from "../../components/Glass";
-import { AnimatedCounter, FadeInView } from "../../components/Motion";
+import { AnimatedCounter, FadeInView, PressableScale } from "../../components/Motion";
 import api from "../../utils/api";
 import { colors, font, radius, space } from "../../utils/theme";
+import { showToast } from "../../utils/toast";
 
 const TYPE_META = {
   MINT: { icon: "arrow-down-circle", color: colors.green, label: "Reward" },
@@ -21,6 +23,7 @@ export default function WalletScreen() {
   const [balance, setBalance] = useState(0);
   const [ledger, setLedger] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [redeemOpen, setRedeemOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -65,7 +68,24 @@ export default function WalletScreen() {
               <Text style={[styles.flowText, { color: colors.yellow }]}>{Math.abs(spent)} staked</Text>
             </View>
           </View>
+
+          {/* Digital membership card footer */}
+          <View style={styles.memberRow}>
+            <View>
+              <Text style={styles.memberLabel}>MEMBER</Text>
+              <Text style={styles.memberId}>BIO-{String(1000 + (balance % 9000)).padStart(4, "0")}</Text>
+            </View>
+            <View style={styles.memberTier}>
+              <Ionicons name="ribbon" size={14} color={colors.lime} />
+              <Text style={styles.memberTierText}>{balance >= 500 ? "Gold" : balance >= 200 ? "Silver" : "Bronze"}</Text>
+            </View>
+          </View>
         </GlassCard>
+
+        <PressableScale style={styles.redeemBar} onPress={() => setRedeemOpen(true)}>
+          <Ionicons name="gift-outline" size={18} color={colors.bg} />
+          <Text style={styles.redeemBarText}>Redeem Rewards</Text>
+        </PressableScale>
 
         <Text style={styles.sectionTitle}>Transactions</Text>
         {ledger.length === 0 ? (
@@ -94,6 +114,9 @@ export default function WalletScreen() {
         )}
         <View style={{ height: 90 }} />
       </ScrollView>
+
+      <RedeemSheet visible={redeemOpen} onClose={() => setRedeemOpen(false)} balance={balance}
+        onRedeem={(r) => { setRedeemOpen(false); showToast(`Redeemed: ${r.name}`); }} />
     </Backdrop>
   );
 }
@@ -111,6 +134,13 @@ const styles = StyleSheet.create({
   flowRow: { flexDirection: "row", gap: 18, marginTop: 14 },
   flowItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   flowText: { fontSize: font.small, fontWeight: "700" },
+  memberRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.stroke },
+  memberLabel: { color: colors.textFaint, fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
+  memberId: { color: colors.text, fontSize: font.body, fontWeight: "800", letterSpacing: 1, marginTop: 2 },
+  memberTier: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: colors.surfaceStrong, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill },
+  memberTierText: { color: colors.lime, fontSize: font.small, fontWeight: "800" },
+  redeemBar: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: colors.lime, borderRadius: radius.md, padding: 15, marginBottom: space.lg },
+  redeemBarText: { color: colors.bg, fontWeight: "900", fontSize: font.body },
 
   sectionTitle: { color: colors.text, fontSize: font.h3, fontWeight: "800", marginBottom: 12 },
   empty: { color: colors.textFaint, fontSize: font.small },

@@ -58,7 +58,9 @@ def run():
 
         today = date.today()
         for idx, zone in enumerate(zones):
-            day = today - timedelta(days=29 - idx)
+            # Seed the 30 days BEFORE today (newest seeded day is yesterday), so
+            # today's slot stays open for the user to log manually.
+            day = today - timedelta(days=30 - idx)
             metrics = generate_metrics(zone)
             evaluation = evaluate_daily_log(metrics)
             log = HealthLog(

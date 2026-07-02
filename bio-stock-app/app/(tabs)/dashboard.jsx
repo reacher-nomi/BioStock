@@ -6,6 +6,7 @@ import {
   Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from "react-native";
 
+import { AchievementsSheet, HelpSheet, SettingsSheet } from "../../components/AppSheets";
 import { ProgressRing } from "../../components/Charts";
 import { Backdrop, GlassCard } from "../../components/Glass";
 import { AnimatedCounter, FadeInView, PressableScale } from "../../components/Motion";
@@ -21,6 +22,7 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
+  const [sheet, setSheet] = useState(null); // "help" | "achievements" | "settings"
   const router = useRouter();
 
   const fetchDashboard = useCallback(async () => {
@@ -51,6 +53,11 @@ export default function DashboardScreen() {
       },
     ]);
   };
+  const iconBtns = [
+    { key: "help", icon: "help-circle-outline" },
+    { key: "achievements", icon: "trophy-outline" },
+    { key: "settings", icon: "settings-outline" },
+  ];
 
   if (loading) {
     return (
@@ -92,9 +99,13 @@ export default function DashboardScreen() {
             <Text style={styles.eyebrow}>BIO-STOCK</Text>
             <Text style={styles.hello}>Hey, {name} 👋</Text>
           </View>
-          <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-            <Ionicons name="log-out-outline" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
+          <View style={styles.headerBtns}>
+            {iconBtns.map((b) => (
+              <TouchableOpacity key={b.key} onPress={() => setSheet(b.key)} style={styles.iconBtn}>
+                <Ionicons name={b.icon} size={19} color={colors.textMuted} />
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {!!error && <Text style={styles.error}>{error}</Text>}
@@ -198,6 +209,12 @@ export default function DashboardScreen() {
 
         <View style={{ height: 90 }} />
       </ScrollView>
+
+      <HelpSheet visible={sheet === "help"} onClose={() => setSheet(null)} />
+      <AchievementsSheet visible={sheet === "achievements"} onClose={() => setSheet(null)}
+        balance={data?.token_balance ?? 0} streak={data?.current_streak ?? 0} recent={recent} />
+      <SettingsSheet visible={sheet === "settings"} onClose={() => setSheet(null)}
+        email={data?.user_email ?? ""} onLogout={() => { setSheet(null); logout(); }} />
     </Backdrop>
   );
 }
@@ -208,7 +225,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: space.lg },
   eyebrow: { color: colors.cyan, fontSize: font.tiny, fontWeight: "800", letterSpacing: 2 },
   hello: { color: colors.text, fontSize: font.h2, fontWeight: "800", marginTop: 2 },
-  logoutBtn: { padding: 10, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.stroke },
+  headerBtns: { flexDirection: "row", gap: 8 },
+  iconBtn: { padding: 9, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.stroke, backgroundColor: colors.surface },
 
   reminder: { flexDirection: "row", alignItems: "center", marginBottom: space.md },
   reminderTitle: { color: colors.text, fontSize: font.body, fontWeight: "700" },

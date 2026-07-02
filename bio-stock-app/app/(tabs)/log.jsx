@@ -5,6 +5,7 @@ import {
   StyleSheet, Text, TextInput, View,
 } from "react-native";
 
+import { DeviceSheet } from "../../components/AppSheets";
 import { Backdrop, GlassCard } from "../../components/Glass";
 import { PressableScale } from "../../components/Motion";
 import api from "../../utils/api";
@@ -24,8 +25,15 @@ export default function LogScreen() {
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [deviceOpen, setDeviceOpen] = useState(false);
+  const [synced, setSynced] = useState(false);
 
   const filled = Object.values(form).every((v) => v !== "");
+
+  const onDeviceSync = (values) => {
+    setForm(Object.fromEntries(Object.entries(values).map(([k, v]) => [k, String(v)])));
+    setSynced(true);
+  };
 
   const onSubmit = async () => {
     try {
@@ -48,6 +56,14 @@ export default function LogScreen() {
           <Text style={styles.eyebrow}>DAILY CHECK-IN</Text>
           <Text style={styles.title}>Log Your Biometrics</Text>
           <Text style={styles.subtitle}>Stay in the green zone to mint Health Tokens.</Text>
+
+          <PressableScale style={styles.connectBtn} onPress={() => setDeviceOpen(true)}>
+            <Ionicons name={synced ? "checkmark-circle" : "watch-outline"} size={18}
+              color={synced ? colors.green : colors.cyan} />
+            <Text style={[styles.connectText, synced && { color: colors.green }]}>
+              {synced ? "Synced from device — review & submit" : "Connect a device to auto-fill"}
+            </Text>
+          </PressableScale>
 
           <GlassCard style={styles.formCard}>
             {FIELDS.map((f) => (
@@ -103,6 +119,8 @@ export default function LogScreen() {
           <View style={{ height: 90 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <DeviceSheet visible={deviceOpen} onClose={() => setDeviceOpen(false)} onSync={onDeviceSync} />
     </Backdrop>
   );
 }
@@ -111,7 +129,9 @@ const styles = StyleSheet.create({
   container: { padding: space.md, paddingTop: 60 },
   eyebrow: { color: colors.cyan, fontSize: font.tiny, fontWeight: "800", letterSpacing: 2 },
   title: { color: colors.text, fontSize: font.h1, fontWeight: "900", marginTop: 4 },
-  subtitle: { color: colors.textMuted, fontSize: font.body, marginTop: 6, marginBottom: space.lg },
+  subtitle: { color: colors.textMuted, fontSize: font.body, marginTop: 6, marginBottom: space.md },
+  connectBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, padding: 14, borderRadius: radius.md, borderWidth: 1, borderColor: colors.stroke, backgroundColor: colors.surface, marginBottom: space.lg },
+  connectText: { color: colors.cyan, fontSize: font.small, fontWeight: "700" },
 
   formCard: { marginBottom: space.md },
   field: { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.stroke },
