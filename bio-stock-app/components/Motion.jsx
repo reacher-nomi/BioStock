@@ -33,7 +33,9 @@ export function FadeInView({ children, delay = 0, offset = 12, style }) {
 }
 
 // Pressable that scales down slightly while pressed (tactile feedback).
-export function PressableScale({ children, onPress, style, disabled, scaleTo = 0.96 }) {
+// Forwards accessibility (and any other) props straight to the underlying
+// Pressable so callers can pass accessibilityLabel/Role/State normally.
+export function PressableScale({ children, onPress, style, disabled, scaleTo = 0.96, ...rest }) {
   const scale = useRef(new Animated.Value(1)).current;
   const to = (v) => Animated.spring(scale, { toValue: v, friction: 6, tension: 120, useNativeDriver: true }).start();
 
@@ -43,6 +45,8 @@ export function PressableScale({ children, onPress, style, disabled, scaleTo = 0
       disabled={disabled}
       onPressIn={() => to(scaleTo)}
       onPressOut={() => to(1)}
+      accessibilityState={{ disabled: !!disabled }}
+      {...rest}
     >
       <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>
     </Pressable>

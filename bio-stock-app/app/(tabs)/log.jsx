@@ -8,6 +8,7 @@ import {
 import { DeviceSheet } from "../../components/AppSheets";
 import { Backdrop, GlassCard } from "../../components/Glass";
 import { PressableScale } from "../../components/Motion";
+import { useAppData } from "../../context/AppDataContext";
 import api from "../../utils/api";
 import { colors, font, radius, space, zoneColor } from "../../utils/theme";
 import { showToast } from "../../utils/toast";
@@ -21,6 +22,7 @@ const FIELDS = [
 ];
 
 export default function LogScreen() {
+  const { refresh } = useAppData();
   const [form, setForm] = useState({ systolic_bp: "", diastolic_bp: "", steps: "", sleep_hours: "", resting_hr: "" });
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
@@ -42,6 +44,7 @@ export default function LogScreen() {
       const res = await api.post("/health/log", payload);
       setResult(res.data);
       showToast(`${res.data.zone.toUpperCase()} zone · +${res.data.tokens_earned} HT`);
+      refresh().catch(() => {}); // keep the shared balance/streak in sync everywhere
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to submit");
     } finally {
@@ -57,7 +60,9 @@ export default function LogScreen() {
           <Text style={styles.title}>Log Your Biometrics</Text>
           <Text style={styles.subtitle}>Stay in the green zone to mint Health Tokens.</Text>
 
-          <PressableScale style={styles.connectBtn} onPress={() => setDeviceOpen(true)}>
+          <PressableScale style={styles.connectBtn} onPress={() => setDeviceOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={synced ? "Synced from device, review and submit" : "Connect a device to auto-fill"}>
             <Ionicons name={synced ? "checkmark-circle" : "watch-outline"} size={18}
               color={synced ? colors.green : colors.cyan} />
             <Text style={[styles.connectText, synced && { color: colors.green }]}>
@@ -81,6 +86,7 @@ export default function LogScreen() {
                   keyboardType="numeric"
                   value={form[f.key]}
                   onChangeText={(v) => setForm((p) => ({ ...p, [f.key]: v }))}
+                  accessibilityLabel={`${f.label} in ${f.unit}`}
                 />
                 <Text style={styles.unit}>{f.unit}</Text>
               </View>
@@ -90,7 +96,7 @@ export default function LogScreen() {
           {!!error && (
             <View style={styles.errorBox}>
               <Ionicons name="alert-circle" size={16} color={colors.red} />
-              <Text style={styles.error}>{error}</Text>
+              <Text style={styles.error} accessibilityRole="alert">{error}</Text>
             </View>
           )}
 
@@ -111,6 +117,9 @@ export default function LogScreen() {
             style={[styles.button, !filled && styles.buttonDisabled]}
             onPress={onSubmit}
             disabled={!filled || loading}
+            accessibilityRole="button"
+            accessibilityLabel="Submit and mint tokens"
+            accessibilityState={{ disabled: !filled || loading, busy: loading }}
           >
             {loading ? <ActivityIndicator color={colors.bg} /> : (
               <Text style={styles.buttonText}>Submit & Mint Tokens</Text>

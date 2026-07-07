@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -8,6 +7,7 @@ import {
 import { Backdrop, GlassCard } from "../../components/Glass";
 import api from "../../utils/api";
 import { apiErrorMessage, passwordProblem } from "../../utils/errors";
+import { saveSession } from "../../utils/session";
 import { colors, font, radius, space } from "../../utils/theme";
 
 const strength = (pw) => {
@@ -35,7 +35,7 @@ export default function RegisterScreen() {
     setLoading(true); setError("");
     try {
       const response = await api.post("/auth/register", { email, password });
-      await AsyncStorage.setItem("access_token", response.data.access_token);
+      await saveSession(response.data);
       router.replace("/(tabs)/dashboard");
     } catch (err) {
       setError(apiErrorMessage(err, "Registration failed"));
@@ -53,13 +53,15 @@ export default function RegisterScreen() {
         <Text style={styles.subtitle}>Start staking on your health.</Text>
 
         <GlassCard glow accent={colors.lime} style={styles.card}>
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label} nativeID="regEmailLabel">Email</Text>
           <TextInput style={styles.input} placeholder="you@email.com" placeholderTextColor={colors.textFaint}
-            autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
+            autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail}
+            accessibilityLabel="Email" accessibilityLabelledBy="regEmailLabel" />
 
-          <Text style={[styles.label, { marginTop: 14 }]}>Password</Text>
+          <Text style={[styles.label, { marginTop: 14 }]} nativeID="regPasswordLabel">Password</Text>
           <TextInput style={styles.input} placeholder="8+ chars, letters and numbers" placeholderTextColor={colors.textFaint}
-            secureTextEntry value={password} onChangeText={setPassword} />
+            secureTextEntry value={password} onChangeText={setPassword}
+            accessibilityLabel="Password" accessibilityLabelledBy="regPasswordLabel" />
           {pwStrength && (
             <View style={styles.strengthRow}>
               <View style={[styles.strengthDot, { backgroundColor: pwStrength.color }]} />
@@ -67,18 +69,20 @@ export default function RegisterScreen() {
             </View>
           )}
 
-          <Text style={[styles.label, { marginTop: 14 }]}>Confirm Password</Text>
+          <Text style={[styles.label, { marginTop: 14 }]} nativeID="regConfirmLabel">Confirm Password</Text>
           <TextInput style={styles.input} placeholder="••••••••" placeholderTextColor={colors.textFaint}
-            secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} />
+            secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword}
+            accessibilityLabel="Confirm password" accessibilityLabelledBy="regConfirmLabel" />
 
-          {!!error && <Text style={styles.error}>{error}</Text>}
+          {!!error && <Text style={styles.error} accessibilityRole="alert">{error}</Text>}
 
-          <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
+          <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}
+            accessibilityRole="button" accessibilityLabel="Register" accessibilityState={{ disabled: loading, busy: loading }}>
             {loading ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.buttonText}>Register</Text>}
           </TouchableOpacity>
         </GlassCard>
 
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} accessibilityRole="link" accessibilityLabel="Sign in">
           <Text style={styles.link}>Already have an account? <Text style={styles.linkAccent}>Sign in</Text></Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>

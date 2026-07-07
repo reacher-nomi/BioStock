@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -11,52 +10,56 @@ import { ProgressRing } from "../../components/Charts";
 import { Backdrop, GlassCard } from "../../components/Glass";
 import { AnimatedCounter, FadeInView, PressableScale } from "../../components/Motion";
 import { Skeleton } from "../../components/Skeleton";
+import { useAppData } from "../../context/AppDataContext";
 import api from "../../utils/api";
+import { getRefreshToken, clearSession } from "../../utils/session";
 import { colors, font, radius, space, zoneColor } from "../../utils/theme";
 
 const ZONE_SCORE = { green: 100, yellow: 60, red: 25 };
 const scoreColor = (s) => (s >= 80 ? colors.green : s >= 50 ? colors.yellow : colors.red);
 
 export default function DashboardScreen() {
-  const [loading, setLoading] = useState(true);
+  const { dashboard: data, loading, refresh } = useAppData();
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const [data, setData] = useState(null);
   const [sheet, setSheet] = useState(null); // "help" | "achievements" | "settings"
   const router = useRouter();
 
-  const fetchDashboard = useCallback(async () => {
+  useFocusEffect(useCallback(() => { refresh().catch(() => {}); }, [refresh]));
+
+  const onRefresh = async () => {
+    setRefreshing(true);
     try {
-      const response = await api.get("/dashboard/");
-      setData(response.data);
+      await refresh();
       setError("");
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to load dashboard");
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  };
 
-  useFocusEffect(useCallback(() => { fetchDashboard(); }, [fetchDashboard]));
-
-  const onRefresh = () => { setRefreshing(true); fetchDashboard(); };
   const logout = () => {
     Alert.alert("Log out?", "You'll need to sign in again.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Log out", style: "destructive",
         onPress: async () => {
-          await AsyncStorage.removeItem("access_token");
+          const refresh_token = await getRefreshToken();
+          if (refresh_token) {
+            // Best-effort server-side revocation; proceed regardless of outcome.
+            api.post("/auth/logout", { refresh_token }).catch(() => {});
+          }
+          await clearSession();
           router.replace("/(auth)/login");
         },
       },
     ]);
   };
   const iconBtns = [
-    { key: "help", icon: "help-circle-outline" },
-    { key: "achievements", icon: "trophy-outline" },
-    { key: "settings", icon: "settings-outline" },
+    { key: "help", icon: "help-circle-outline", label: "Help center" },
+    { key: "achievements", icon: "trophy-outline", label: "Achievements" },
+    { key: "settings", icon: "settings-outline", label: "Settings" },
   ];
 
   if (loading) {
@@ -101,18 +104,20 @@ export default function DashboardScreen() {
           </View>
           <View style={styles.headerBtns}>
             {iconBtns.map((b) => (
-              <TouchableOpacity key={b.key} onPress={() => setSheet(b.key)} style={styles.iconBtn}>
+              <TouchableOpacity key={b.key} onPress={() => setSheet(b.key)} style={styles.iconBtn}
+                accessibilityRole="button" accessibilityLabel={b.label}>
                 <Ionicons name={b.icon} size={19} color={colors.textMuted} />
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {!!error && <Text style={styles.error}>{error}</Text>}
+        {!!error && <Text style={styles.error} accessibilityRole="alert">{error}</Text>}
 
         {/* Reminder to log today */}
         {!zone && (
-          <PressableScale onPress={() => router.push("/(tabs)/log")}>
+          <PressableScale onPress={() => router.push("/(tabs)/log")}
+            accessibilityRole="button" accessibilityLabel="Log today's biometrics">
             <GlassCard glow accent={colors.lime} style={styles.reminder}>
               <Ionicons name="notifications" size={20} color={colors.lime} />
               <View style={{ flex: 1, marginLeft: 12 }}>

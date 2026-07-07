@@ -7,6 +7,7 @@ import {
 
 import { Backdrop, GlassCard } from "../../components/Glass";
 import { FadeInView, PressableScale } from "../../components/Motion";
+import { useAppData } from "../../context/AppDataContext";
 import api from "../../utils/api";
 import { colors, font, radius, space } from "../../utils/theme";
 import { showToast } from "../../utils/toast";
@@ -15,22 +16,22 @@ const PRESETS = [10, 25, 50, 100];
 const statusColor = (s) => ({ ACTIVE: colors.cyan, SUCCESS: colors.green, FAILED: colors.red }[s] || colors.textFaint);
 
 export default function StakeScreen() {
+  const { dashboard, refresh } = useAppData();
+  const balance = dashboard?.token_balance ?? 0;
   const [goalName, setGoalName] = useState("7-Day Green Streak");
   const [stakeAmount, setStakeAmount] = useState("25");
-  const [balance, setBalance] = useState(0);
   const [goals, setGoals] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [bal, g] = await Promise.all([api.get("/tokens/balance"), api.get("/tokens/goals")]);
-      setBalance(bal.data.balance);
+      const [, g] = await Promise.all([refresh(), api.get("/tokens/goals")]);
       setGoals(g.data);
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to load");
     }
-  }, []);
+  }, [refresh]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -66,26 +67,28 @@ export default function StakeScreen() {
         <GlassCard style={styles.formCard}>
           <Text style={styles.fieldLabel}>Goal</Text>
           <TextInput style={styles.textInput} value={goalName} onChangeText={setGoalName}
-            placeholderTextColor={colors.textFaint} />
+            placeholderTextColor={colors.textFaint} accessibilityLabel="Goal name" />
 
           <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Stake Amount</Text>
           <View style={styles.presetRow}>
             {PRESETS.map((p) => (
               <TouchableOpacity key={p}
                 style={[styles.chip, Number(stakeAmount) === p && styles.chipActive]}
-                onPress={() => setStakeAmount(String(p))}>
+                onPress={() => setStakeAmount(String(p))}
+                accessibilityRole="button" accessibilityLabel={`Stake ${p} tokens`}
+                accessibilityState={{ selected: Number(stakeAmount) === p }}>
                 <Text style={[styles.chipText, Number(stakeAmount) === p && styles.chipTextActive]}>{p}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <TextInput style={styles.textInput} value={stakeAmount} onChangeText={setStakeAmount}
-            keyboardType="numeric" placeholderTextColor={colors.textFaint} />
+            keyboardType="numeric" placeholderTextColor={colors.textFaint} accessibilityLabel="Stake amount in tokens" />
         </GlassCard>
 
         {!!error && (
           <View style={styles.errorBox}>
             <Ionicons name="alert-circle" size={16} color={colors.red} />
-            <Text style={styles.error}>{error}</Text>
+            <Text style={styles.error} accessibilityRole="alert">{error}</Text>
           </View>
         )}
 
@@ -100,7 +103,10 @@ export default function StakeScreen() {
         )}
 
         <PressableScale onPress={stake} disabled={insufficient || loading}
-          style={[styles.button, insufficient && styles.buttonDisabled]}>
+          style={[styles.button, insufficient && styles.buttonDisabled]}
+          accessibilityRole="button"
+          accessibilityLabel={insufficient ? "Insufficient balance" : `Lock ${stakeAmount} tokens`}
+          accessibilityState={{ disabled: insufficient || loading, busy: loading }}>
           {loading ? <ActivityIndicator color={colors.bg} /> : (
             <Text style={styles.buttonText}>{insufficient ? "Insufficient Balance" : `Lock ${stakeAmount} HT`}</Text>
           )}

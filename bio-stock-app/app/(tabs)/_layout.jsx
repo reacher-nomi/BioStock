@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
+import { AppDataProvider } from "../../context/AppDataContext";
 import { colors } from "../../utils/theme";
 
 const ICONS = {
@@ -13,6 +14,7 @@ const ICONS = {
 
 export default function TabLayout() {
   return (
+    <AppDataProvider>
     <Tabs
       screenOptions={({ route }) => ({
         headerShown: false,
@@ -44,5 +46,6 @@ export default function TabLayout() {
       <Tabs.Screen name="stake" options={{ title: "Stake" }} />
       <Tabs.Screen name="wallet" options={{ title: "Wallet" }} />
     </Tabs>
+    </AppDataProvider>
   );
 }

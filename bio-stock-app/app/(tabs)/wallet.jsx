@@ -6,6 +6,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native
 import { RedeemSheet } from "../../components/AppSheets";
 import { Backdrop, GlassCard } from "../../components/Glass";
 import { AnimatedCounter, FadeInView, PressableScale } from "../../components/Motion";
+import { useAppData } from "../../context/AppDataContext";
 import api from "../../utils/api";
 import { colors, font, radius, space } from "../../utils/theme";
 import { showToast } from "../../utils/toast";
@@ -20,22 +21,22 @@ const TYPE_META = {
 const meta = (t) => TYPE_META[t] || { icon: "swap-horizontal", color: colors.textMuted, label: t };
 
 export default function WalletScreen() {
-  const [balance, setBalance] = useState(0);
+  const { dashboard, refresh } = useAppData();
+  const balance = dashboard?.token_balance ?? 0;
   const [ledger, setLedger] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [redeemOpen, setRedeemOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [bal, led] = await Promise.all([
-        api.get("/tokens/balance"),
+      const [, led] = await Promise.all([
+        refresh(),
         api.get("/tokens/ledger?limit=100"),
       ]);
-      setBalance(bal.data.balance);
       setLedger(led.data);
     } catch (e) { /* keep last good state */ }
     finally { setRefreshing(false); }
-  }, []);
+  }, [refresh]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 

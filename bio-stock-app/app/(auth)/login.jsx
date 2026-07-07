@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -9,6 +8,7 @@ import {
 import { Backdrop, GlassCard } from "../../components/Glass";
 import api from "../../utils/api";
 import { apiErrorMessage } from "../../utils/errors";
+import { saveSession } from "../../utils/session";
 import { colors, font, radius, space } from "../../utils/theme";
 
 export default function LoginScreen() {
@@ -24,7 +24,7 @@ export default function LoginScreen() {
     setLoading(true); setError("");
     try {
       const response = await api.post("/auth/login", { email: emailValue, password: passwordValue });
-      await AsyncStorage.setItem("access_token", response.data.access_token);
+      await saveSession(response.data);
       router.replace("/(tabs)/dashboard");
     } catch (err) {
       setError(apiErrorMessage(err, "Login failed"));
@@ -48,31 +48,37 @@ export default function LoginScreen() {
         </View>
 
         <GlassCard glow accent={colors.cyan} style={styles.card}>
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label} nativeID="loginEmailLabel">Email</Text>
           <TextInput style={styles.input} placeholder="you@email.com" placeholderTextColor={colors.textFaint}
-            autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
+            autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail}
+            accessibilityLabel="Email" accessibilityLabelledBy="loginEmailLabel" />
 
-          <Text style={[styles.label, { marginTop: 14 }]}>Password</Text>
+          <Text style={[styles.label, { marginTop: 14 }]} nativeID="loginPasswordLabel">Password</Text>
           <View style={styles.passwordRow}>
             <TextInput style={styles.passwordInput} placeholder="••••••••" placeholderTextColor={colors.textFaint}
-              secureTextEntry={!showPassword} value={password} onChangeText={setPassword} />
-            <TouchableOpacity onPress={() => setShowPassword((s) => !s)} style={styles.eyeBtn}>
+              secureTextEntry={!showPassword} value={password} onChangeText={setPassword}
+              accessibilityLabel="Password" accessibilityLabelledBy="loginPasswordLabel" />
+            <TouchableOpacity onPress={() => setShowPassword((s) => !s)} style={styles.eyeBtn}
+              accessibilityRole="button" accessibilityLabel={showPassword ? "Hide password" : "Show password"}>
               <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
-          {!!error && <Text style={styles.error}>{error}</Text>}
+          {!!error && <Text style={styles.error} accessibilityRole="alert">{error}</Text>}
 
-          <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+          <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}
+            accessibilityRole="button" accessibilityLabel="Sign in" accessibilityState={{ disabled: loading, busy: loading }}>
             {loading ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.buttonText}>Sign In</Text>}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleDemo} disabled={loading} style={styles.demoBtn}>
+          <TouchableOpacity onPress={handleDemo} disabled={loading} style={styles.demoBtn}
+            accessibilityRole="button" accessibilityLabel="Try the demo account">
             <Text style={styles.demoText}>Try the demo account</Text>
           </TouchableOpacity>
         </GlassCard>
 
-        <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
+        <TouchableOpacity onPress={() => router.push("/(auth)/register")}
+          accessibilityRole="link" accessibilityLabel="Create an account">
           <Text style={styles.link}>New here? <Text style={styles.linkAccent}>Create an account</Text></Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>
