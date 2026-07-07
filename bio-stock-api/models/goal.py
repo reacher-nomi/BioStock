@@ -1,9 +1,8 @@
-from datetime import datetime
-
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from database import Base
+from time_utils import utcnow
 
 
 class Goal(Base):
@@ -18,7 +17,7 @@ class Goal(Base):
     duration_days = Column(Integer, nullable=False, default=7)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
-    status = Column(String, nullable=False, default="ACTIVE")
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    status = Column(String, nullable=False, default="ACTIVE", index=True)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
 
     user = relationship("User", back_populates="goals")

@@ -1,9 +1,8 @@
-from datetime import datetime
-
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from database import Base
+from time_utils import utcnow
 
 
 class TokenLedger(Base):
@@ -14,6 +13,6 @@ class TokenLedger(Base):
     amount = Column(Integer, nullable=False)
     transaction_type = Column(String, nullable=False)
     reason = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False, index=True)
 
     user = relationship("User", back_populates="token_ledger_entries")

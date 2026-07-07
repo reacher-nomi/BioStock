@@ -6,12 +6,12 @@ from sqlalchemy.pool import StaticPool
 
 import main
 from database import Base, get_db
-from routes import auth
 
 
 @pytest.fixture
 def client():
-    # Isolated in-memory DB shared across the test's connections.
+    # Isolated in-memory DB per test — this also naturally resets the
+    # DB-backed rate limiter and refresh-token tables between tests.
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
@@ -26,7 +26,9 @@ def client():
             db.close()
 
     main.app.dependency_overrides[get_db] = override_get_db
-    auth._attempts.clear()  # reset rate limiter between tests
+    # Exposed so tests can open a raw session on the same in-memory DB
+    # (e.g. to assert a secret is stored encrypted, not what it decrypts to).
+    main.app.state.test_session_local = TestingSession
 
     with TestClient(main.app) as c:
         yield c

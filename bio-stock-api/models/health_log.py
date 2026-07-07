@@ -1,9 +1,8 @@
-from datetime import datetime
-
 from sqlalchemy import Column, Date, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from database import Base
+from time_utils import utcnow
 
 
 class HealthLog(Base):
@@ -20,6 +19,6 @@ class HealthLog(Base):
     resting_hr = Column(Integer, nullable=False)
     zone = Column(String, nullable=False)
     tokens_earned = Column(Integer, default=0, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
 
     user = relationship("User", back_populates="health_logs")

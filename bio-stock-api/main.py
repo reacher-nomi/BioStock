@@ -6,16 +6,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
 from config import get_settings
-from database import Base, engine
+from db_bootstrap import run_migrations
 from logging_config import RequestLoggingMiddleware, configure_logging
-from models import Goal, HealthLog, TokenLedger, User  # noqa: F401
 from routes import auth, dashboard, fhir, health, mfa, tokens
 
 configure_logging()
 logger = logging.getLogger("bio-stock")
 settings = get_settings()  # validates configuration at startup
 
-Base.metadata.create_all(bind=engine)
+run_migrations()
 
 app = FastAPI(title="Bio-Stock API", version="1.0")
 app.add_middleware(RequestLoggingMiddleware)

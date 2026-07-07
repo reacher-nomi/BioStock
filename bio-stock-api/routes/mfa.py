@@ -14,6 +14,7 @@ from models.mfa import UserMFA
 from models.user import User
 from routes.auth import verify_token
 from schemas import MFAVerify
+from services.crypto import decrypt, encrypt
 
 router = APIRouter(prefix="/auth/mfa", tags=["mfa"])
 audit_log = logging.getLogger("bio-stock.audit")
@@ -30,14 +31,17 @@ def mfa_setup(db: Session = Depends(get_db), user_id: int = Depends(verify_token
     user = db.query(User).filter(User.id == user_id).first()
     rec = db.query(UserMFA).filter(UserMFA.user_id == user_id).first()
     secret = pyotp.random_base32()
+    encrypted_secret = encrypt(secret)
     if rec:
-        rec.secret = secret
+        rec.secret = encrypted_secret
         rec.enabled = False
     else:
-        rec = UserMFA(user_id=user_id, secret=secret, enabled=False)
+        rec = UserMFA(user_id=user_id, secret=encrypted_secret, enabled=False)
         db.add(rec)
     db.commit()
 
+    # Raw secret is returned once for the authenticator app's QR/URI; only the
+    # encrypted form is ever persisted.
     uri = pyotp.totp.TOTP(secret).provisioning_uri(name=user.email, issuer_name="Bio-Stock")
     return {"secret": secret, "otpauth_uri": uri}
 
@@ -47,7 +51,7 @@ def mfa_verify(body: MFAVerify, db: Session = Depends(get_db), user_id: int = De
     rec = db.query(UserMFA).filter(UserMFA.user_id == user_id).first()
     if not rec:
         raise HTTPException(status_code=400, detail="MFA not set up")
-    if not pyotp.TOTP(rec.secret).verify(body.code, valid_window=1):
+    if not pyotp.TOTP(decrypt(rec.secret)).verify(body.code, valid_window=1):
         audit_log.warning(f"mfa_verify_failed user_id={user_id}")
         raise HTTPException(status_code=401, detail="Invalid code")
     rec.enabled = True

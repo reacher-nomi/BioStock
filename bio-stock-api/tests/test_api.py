@@ -1,4 +1,5 @@
 """Integration tests covering auth, health logging, tokens, staking, and FHIR."""
+import main
 from tests.conftest import GREEN_LOG
 
 
@@ -101,3 +102,60 @@ def test_security_headers_present(client):
     r = client.get("/healthcheck")
     assert r.headers.get("X-Content-Type-Options") == "nosniff"
     assert r.headers.get("X-Frame-Options") == "DENY"
+
+
+def test_mfa_secret_stored_encrypted_not_plaintext(client):
+    from models.mfa import UserMFA
+    from services.crypto import decrypt
+
+    token = client.post("/auth/register", json={"email": "e@e.com", "password": "password1"}).json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    raw_secret = client.post("/auth/mfa/setup", headers=headers).json()["secret"]
+
+    db = main.app.state.test_session_local()
+    stored = db.query(UserMFA).first().secret
+    db.close()
+
+    assert stored != raw_secret  # never persisted in plaintext
+    assert decrypt(stored) == raw_secret  # but recoverable via the app's key
+
+
+def test_register_returns_refresh_token(client):
+    body = client.post("/auth/register", json={"email": "r@r.com", "password": "password1"}).json()
+    assert "refresh_token" in body and body["refresh_token"]
+
+
+def test_refresh_token_rotates_and_old_one_is_invalid(client):
+    tokens = client.post("/auth/register", json={"email": "rot@r.com", "password": "password1"}).json()
+    old_refresh = tokens["refresh_token"]
+
+    r = client.post("/auth/refresh", json={"refresh_token": old_refresh})
+    assert r.status_code == 200
+    new_tokens = r.json()
+    assert new_tokens["access_token"] != tokens["access_token"]
+    assert new_tokens["refresh_token"] != old_refresh
+
+    # The rotated-out token can no longer be used.
+    reuse = client.post("/auth/refresh", json={"refresh_token": old_refresh})
+    assert reuse.status_code == 401
+
+    # The new one still works.
+    assert client.post("/auth/refresh", json={"refresh_token": new_tokens["refresh_token"]}).status_code == 200
+
+
+def test_logout_revokes_refresh_token(client):
+    tokens = client.post("/auth/register", json={"email": "lo@r.com", "password": "password1"}).json()
+    assert client.post("/auth/logout", json={"refresh_token": tokens["refresh_token"]}).status_code == 200
+    assert client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]}).status_code == 401
+
+
+def test_invalid_refresh_token_rejected(client):
+    assert client.post("/auth/refresh", json={"refresh_token": "not-a-real-token"}).status_code == 401
+
+
+def test_login_rate_limited_after_repeated_failures(client):
+    client.post("/auth/register", json={"email": "rl@r.com", "password": "password1"})
+    last_status = None
+    for _ in range(6):
+        last_status = client.post("/auth/login", json={"email": "rl@r.com", "password": "wrongpass1"}).status_code
+    assert last_status == 429

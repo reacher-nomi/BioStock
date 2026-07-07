@@ -1,7 +1,6 @@
 import logging
-import time
-from collections import defaultdict
-from datetime import datetime, timedelta
+import secrets
+from datetime import timedelta
 
 import pyotp
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -14,7 +13,11 @@ from config import get_settings
 from database import get_db
 from models.mfa import UserMFA
 from models.user import User
-from schemas import Token, UserLogin, UserRegister
+from schemas import RefreshRequest, Token, UserLogin, UserRegister
+from services.crypto import decrypt
+from services.rate_limiter import enforce_rate_limit
+from services.refresh_tokens import create_refresh_token, revoke_refresh_token, rotate_refresh_token
+from time_utils import utcnow
 
 settings = get_settings()
 audit_log = logging.getLogger("bio-stock.audit")
@@ -26,20 +29,13 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer()
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# --- Simple in-memory rate limiter (per-IP) to slow credential brute-forcing. ---
-_RATE_LIMIT_MAX = 5          # attempts
-_RATE_LIMIT_WINDOW = 60.0    # seconds
-_attempts: dict[str, list[float]] = defaultdict(list)
 
-
-def rate_limit(request: Request) -> None:
+def rate_limit(request: Request, db: Session = Depends(get_db)) -> None:
+    """Per-IP throttle on auth endpoints, backed by the DB so it survives
+    restarts and stays correct across multiple worker processes."""
     ip = request.client.host if request.client else "unknown"
-    now = time.monotonic()
-    recent = [t for t in _attempts[ip] if now - t < _RATE_LIMIT_WINDOW]
-    if len(recent) >= _RATE_LIMIT_MAX:
+    if not enforce_rate_limit(ip, db):
         raise HTTPException(status_code=429, detail="Too many attempts. Try again in a minute.")
-    recent.append(now)
-    _attempts[ip] = recent
 
 
 def hash_password(password: str) -> str:
@@ -52,9 +48,19 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
+    expire = utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    # jti guarantees each issued token is unique even if minted in the same
+    # second as another (e.g. back-to-back register + refresh calls).
+    to_encode.update({"exp": expire, "jti": secrets.token_hex(8)})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def _issue_tokens(user_id: int, db: Session) -> dict:
+    return {
+        "access_token": create_access_token({"sub": str(user_id)}),
+        "refresh_token": create_refresh_token(user_id, db),
+        "token_type": "bearer",
+    }
 
 
 @router.post("/register", response_model=Token)
@@ -69,8 +75,7 @@ def register(user: UserRegister, _: None = Depends(rate_limit), db: Session = De
     db.commit()
     db.refresh(new_user)
 
-    access_token = create_access_token({"sub": str(new_user.id)})
-    return {"access_token": access_token, "token_type": "bearer"}
+    return _issue_tokens(new_user.id, db)
 
 
 @router.post("/login", response_model=Token)
@@ -84,13 +89,34 @@ def login(user: UserLogin, _: None = Depends(rate_limit), db: Session = Depends(
     # Second factor: if MFA is enabled, a valid TOTP code is required.
     mfa = db.query(UserMFA).filter(UserMFA.user_id == db_user.id, UserMFA.enabled.is_(True)).first()
     if mfa:
-        if not user.otp_code or not pyotp.TOTP(mfa.secret).verify(user.otp_code, valid_window=1):
+        if not user.otp_code or not pyotp.TOTP(decrypt(mfa.secret)).verify(user.otp_code, valid_window=1):
             audit_log.warning(f"login_mfa_failed user_id={db_user.id}")
             raise HTTPException(status_code=401, detail="Invalid or missing MFA code")
 
-    access_token = create_access_token({"sub": str(db_user.id)})
     audit_log.info(f"login_success user_id={db_user.id}")
-    return {"access_token": access_token, "token_type": "bearer"}
+    return _issue_tokens(db_user.id, db)
+
+
+@router.post("/refresh", response_model=Token)
+def refresh(body: RefreshRequest, db: Session = Depends(get_db)):
+    """Exchange a refresh token for a new access token. Rotates the refresh
+    token on every use (old one is revoked, a new one is returned)."""
+    result = rotate_refresh_token(body.refresh_token, db)
+    if not result:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    user_id, new_refresh_token = result
+    return {
+        "access_token": create_access_token({"sub": str(user_id)}),
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer",
+    }
+
+
+@router.post("/logout")
+def logout(body: RefreshRequest, db: Session = Depends(get_db)):
+    """Revoke a refresh token server-side. The client discards its local tokens."""
+    revoke_refresh_token(body.refresh_token, db)
+    return {"ok": True}
 
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> int:

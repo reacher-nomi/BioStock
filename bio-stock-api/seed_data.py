@@ -3,7 +3,8 @@ from datetime import date, timedelta
 
 from passlib.context import CryptContext
 
-from database import Base, SessionLocal, engine
+from database import SessionLocal
+from db_bootstrap import run_migrations
 from models.health_log import HealthLog
 from models.token_ledger import TokenLedger
 from models.user import User
@@ -39,7 +40,7 @@ def generate_metrics(zone: str):
 
 
 def run():
-    Base.metadata.create_all(bind=engine)
+    run_migrations()
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.email == "test@test.com").first()

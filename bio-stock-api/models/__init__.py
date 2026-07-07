@@ -1,7 +1,9 @@
 from .goal import Goal
 from .health_log import HealthLog
+from .login_attempt import LoginAttempt
 from .mfa import UserMFA
+from .refresh_token import RefreshToken
 from .token_ledger import TokenLedger
 from .user import User
 
-__all__ = ["User", "HealthLog", "TokenLedger", "Goal", "UserMFA"]
+__all__ = ["User", "HealthLog", "TokenLedger", "Goal", "UserMFA", "RefreshToken", "LoginAttempt"]

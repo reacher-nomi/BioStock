@@ -10,6 +10,8 @@ pydantic-settings
 python-multipart
 fhir.resources
 pyotp
+cryptography
+alembic
 pytest
 pytest-cov
 hypothesis
