@@ -10,6 +10,7 @@ repos:
       - id: ruff-format
         files: ^bio-stock-api/
 
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
