@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Any
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 class UserRegister(BaseModel):
@@ -42,6 +42,16 @@ class HealthLogRequest(BaseModel):
     steps: int = Field(ge=0, le=100000)
     sleep_hours: float = Field(ge=0, le=24)
     resting_hr: int = Field(ge=30, le=220)
+    # Optional device-local date (YYYY-MM-DD). Lets a user's own calendar day
+    # decide "today" instead of trusting the server's timezone; see
+    # routes/health.py:resolve_log_date for the bounded-tolerance check.
+    local_date: str | None = None
+
+    @model_validator(mode="after")
+    def _diastolic_below_systolic(self):
+        if self.diastolic_bp >= self.systolic_bp:
+            raise ValueError("diastolic_bp must be lower than systolic_bp")
+        return self
 
 
 class HealthLogResponse(BaseModel):

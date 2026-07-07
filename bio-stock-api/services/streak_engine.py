@@ -69,17 +69,24 @@ def calculate_streak_bonus(streak_days: int, base_tokens: int) -> int:
 
 
 def get_current_streak(user_id: int, db: Session) -> int:
+    """Consecutive GREEN days ending today.
+
+    Fetches all of the user's (date, zone) pairs in a single query, then
+    walks backwards in Python — one query total instead of one query per day
+    of the streak.
+    """
+    rows = (
+        db.query(HealthLog.date, HealthLog.zone)
+        .filter(HealthLog.user_id == user_id)
+        .all()
+    )
+    zone_by_date = {log_date: zone for log_date, zone in rows}
+
     streak = 0
     cursor_day = date.today()
-
-    # Count backwards from today until a non-green day or missing log.
     while True:
-        log = (
-            db.query(HealthLog)
-            .filter(HealthLog.user_id == user_id, HealthLog.date == cursor_day)
-            .first()
-        )
-        if not log or log.zone.lower() != "green":
+        zone = zone_by_date.get(cursor_day)
+        if zone is None or zone.lower() != "green":
             break
         streak += 1
         cursor_day -= timedelta(days=1)

@@ -3,9 +3,10 @@ import random
 
 from hypothesis import given
 from hypothesis import strategies as st
+from pydantic import ValidationError
 
+from schemas import HealthLogRequest
 from services.streak_engine import calculate_streak_bonus, evaluate_daily_log
-from services.validator import validate_health_log
 from tests.conftest import GREEN_LOG
 
 metric = st.integers(min_value=-10_000, max_value=200_000)
@@ -32,9 +33,23 @@ def test_streak_bonus_never_below_base(streak, base):
     assert calculate_streak_bonus(streak, base) >= base
 
 
-@given(st.dictionaries(st.text(), st.integers()))
-def test_validator_never_crashes_on_arbitrary_input(payload):
-    assert isinstance(validate_health_log(payload), bool)
+@given(
+    systolic_bp=st.integers(min_value=-10_000, max_value=200_000),
+    diastolic_bp=st.integers(min_value=-10_000, max_value=200_000),
+    steps=st.integers(min_value=-10_000, max_value=200_000),
+    sleep_hours=st.floats(min_value=-1000, max_value=1000, allow_nan=False),
+    resting_hr=st.integers(min_value=-10_000, max_value=200_000),
+)
+def test_schema_validation_never_raises_anything_but_validation_error(
+    systolic_bp, diastolic_bp, steps, sleep_hours, resting_hr
+):
+    try:
+        HealthLogRequest(
+            systolic_bp=systolic_bp, diastolic_bp=diastolic_bp, steps=steps,
+            sleep_hours=sleep_hours, resting_hr=resting_hr,
+        )
+    except ValidationError:
+        pass  # expected for out-of-range / cross-field-invalid input
 
 
 def test_fuzz_health_log_endpoint_never_500s(auth_client):

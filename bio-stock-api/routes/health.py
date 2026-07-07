@@ -1,6 +1,7 @@
-from datetime import date
+from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -10,9 +11,29 @@ from schemas import HealthLogRequest, HealthLogResponse
 from services.delta_engine import calculate_delta_bonus, get_baseline, improvement_breakdown
 from services.streak_engine import calculate_streak_bonus, evaluate_daily_log, get_current_streak
 from services.token_engine import TokenEngine
-from services.validator import validate_health_log
 
 router = APIRouter(prefix="/health", tags=["health"])
+
+# How far a client-reported local date may drift from the server's UTC date.
+# 1 day covers ordinary timezone skew around midnight; it deliberately does not
+# try to cover every offset on Earth (up to ~26h at the date line) — a wider
+# window would let a client backdate logs to game streaks/history.
+_LOCAL_DATE_TOLERANCE_DAYS = 1
+
+
+def resolve_log_date(local_date: str | None) -> date:
+    """The user's device-local date wins over the server's date, within a
+    bounded tolerance, so "today" matches the user rather than the server."""
+    server_today = datetime.now(UTC).date()
+    if not local_date:
+        return server_today
+    try:
+        parsed = date.fromisoformat(local_date)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid local_date format, expected YYYY-MM-DD") from exc
+    if abs((parsed - server_today).days) > _LOCAL_DATE_TOLERANCE_DAYS:
+        raise HTTPException(status_code=400, detail="local_date is outside the allowed range")
+    return parsed
 
 
 @router.post("/log", response_model=HealthLogResponse)
@@ -21,7 +42,7 @@ def log_health(
     db: Session = Depends(get_db),
     user_id: int = Depends(verify_token),
 ):
-    today = date.today()
+    today = resolve_log_date(health_log.local_date)
     existing = db.query(HealthLog).filter(HealthLog.user_id == user_id, HealthLog.date == today).first()
     if existing:
         raise HTTPException(status_code=409, detail="Already logged today")
@@ -33,8 +54,6 @@ def log_health(
         "sleep_hours": health_log.sleep_hours,
         "resting_hr": health_log.resting_hr,
     }
-    if not validate_health_log(health_dict):
-        raise HTTPException(status_code=400, detail="Invalid health data")
 
     evaluation = evaluate_daily_log(health_dict)
     zone = evaluation["zone"]
@@ -42,7 +61,7 @@ def log_health(
     streak = get_current_streak(user_id, db)
     streak_tokens = calculate_streak_bonus(streak, base_tokens) if base_tokens > 0 else 0
 
-    # Relative-improvement (Delta) reward vs the user's baseline (earliest logs).
+    # Relative-improvement (Delta) reward vs the user's baseline.
     baseline = get_baseline(user_id, db)
     delta_bonus = calculate_delta_bonus(baseline, health_dict)
 
@@ -60,7 +79,14 @@ def log_health(
         tokens_earned=total_tokens,
     )
     db.add(log_entry)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        # Two concurrent requests can both pass the "already logged" check
+        # before either commits; the UNIQUE(user_id, date) constraint is the
+        # real guard, so turn its violation into the same clean 409.
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Already logged today") from exc
     db.refresh(log_entry)
 
     if streak_tokens > 0:
@@ -82,8 +108,8 @@ def log_health(
 
 
 @router.get("/today")
-def get_today(db: Session = Depends(get_db), user_id: int = Depends(verify_token)):
-    today = date.today()
+def get_today(local_date: str | None = None, db: Session = Depends(get_db), user_id: int = Depends(verify_token)):
+    today = resolve_log_date(local_date)
     log = db.query(HealthLog).filter(HealthLog.user_id == user_id, HealthLog.date == today).first()
     if not log:
         return {"logged": False}

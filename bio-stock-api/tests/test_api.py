@@ -1,4 +1,10 @@
 """Integration tests covering auth, health logging, tokens, staking, and FHIR."""
+from datetime import date, timedelta
+from unittest.mock import patch
+
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
 import main
 from tests.conftest import GREEN_LOG
 
@@ -41,6 +47,38 @@ def test_duplicate_log_same_day_conflicts(auth_client):
 def test_out_of_range_log_rejected(auth_client):
     bad = {**GREEN_LOG, "systolic_bp": 9999}
     assert auth_client.post("/health/log", json=bad).status_code == 422
+
+
+def test_concurrent_duplicate_commit_returns_409_not_500(auth_client):
+    # Simulates two requests both passing the "already logged" check before
+    # either commits: the DB UNIQUE constraint is what actually prevents the
+    # duplicate, and its violation must surface as a clean 409, not a 500.
+    fake_conflict = IntegrityError("INSERT", {}, Exception("UNIQUE constraint failed"))
+    with patch.object(Session, "commit", side_effect=fake_conflict):
+        r = auth_client.post("/health/log", json=GREEN_LOG)
+    assert r.status_code == 409
+
+    # The session must still be usable afterwards (rollback actually happened).
+    assert auth_client.post("/health/log", json=GREEN_LOG).status_code == 200
+
+
+def test_local_date_within_tolerance_is_honored(auth_client):
+    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    r = auth_client.post("/health/log", json={**GREEN_LOG, "local_date": yesterday})
+    assert r.status_code == 200
+    history = auth_client.get("/health/history?days=7").json()
+    assert history[-1]["date"] == yesterday
+
+
+def test_local_date_outside_tolerance_rejected(auth_client):
+    too_far = (date.today() - timedelta(days=5)).isoformat()
+    r = auth_client.post("/health/log", json={**GREEN_LOG, "local_date": too_far})
+    assert r.status_code == 400
+
+
+def test_local_date_malformed_rejected(auth_client):
+    r = auth_client.post("/health/log", json={**GREEN_LOG, "local_date": "not-a-date"})
+    assert r.status_code == 400
 
 
 def test_stake_requires_positive_amount(auth_client):
