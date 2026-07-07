@@ -60,3 +60,21 @@ def resolve_due_goals(user_id: int, db: Session) -> None:
 
     if due_goals:
         db.commit()
+
+
+def resolve_all_due_goals(db: Session) -> int:
+    """Resolve due goals for every user with an outstanding ACTIVE goal.
+
+    Used by the background scheduler as a backstop for users who don't open
+    the app — the per-request lazy resolution (above) is what normally
+    resolves goals, this just guarantees it eventually happens either way.
+    Returns the number of users whose goals were resolved.
+    """
+    today = date.today()
+    user_ids = [
+        row[0] for row in
+        db.query(Goal.user_id).filter(Goal.status == "ACTIVE", Goal.end_date <= today).distinct().all()
+    ]
+    for user_id in user_ids:
+        resolve_due_goals(user_id, db)
+    return len(user_ids)

@@ -5,6 +5,9 @@
     "context": ".."
   },
   "overrideCommand": false,
+  "mounts": [
+    "source=biostock-data,target=/app/data,type=volume"
+  ],
   "forwardPorts": [8000],
   "portsAttributes": {
     "8000": {

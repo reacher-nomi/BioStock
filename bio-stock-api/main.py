@@ -1,14 +1,18 @@
+import asyncio
 import logging
 import os
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
 from config import get_settings
+from database import SessionLocal
 from db_bootstrap import run_migrations
 from logging_config import RequestLoggingMiddleware, configure_logging
 from routes import auth, dashboard, fhir, health, mfa, tokens
+from services.goal_engine import resolve_all_due_goals
 
 configure_logging()
 logger = logging.getLogger("bio-stock")
@@ -16,7 +20,41 @@ settings = get_settings()  # validates configuration at startup
 
 run_migrations()
 
-app = FastAPI(title="Bio-Stock API", version="1.0")
+# Background backstop for staking goal resolution. The primary mechanism is
+# lazy, per-request resolution (see routes/tokens.py, dashboard.py) — this
+# just guarantees it also happens for users who don't open the app. The first
+# run is delayed by a full interval (not run-on-startup) so a fast test suite
+# never triggers it against a real database as a side effect.
+GOAL_RESOLUTION_INTERVAL_SECONDS = int(os.environ.get("GOAL_RESOLUTION_INTERVAL_SECONDS", "1800"))
+
+
+async def _goal_resolution_loop():
+    while True:
+        await asyncio.sleep(GOAL_RESOLUTION_INTERVAL_SECONDS)
+        try:
+            db = SessionLocal()
+            try:
+                resolved = resolve_all_due_goals(db)
+                if resolved:
+                    logger.info(f"background_goal_resolution resolved_users={resolved}")
+            finally:
+                db.close()
+        except Exception:
+            logger.exception("background_goal_resolution_failed")
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    task = asyncio.create_task(_goal_resolution_loop())
+    try:
+        yield
+    finally:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+
+app = FastAPI(title="Bio-Stock API", version="1.0", lifespan=lifespan)
 app.add_middleware(RequestLoggingMiddleware)
 
 

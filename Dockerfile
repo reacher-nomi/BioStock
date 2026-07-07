@@ -15,7 +15,8 @@ RUN npx expo export --platform web --output-dir /web/dist
 FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    WEB_DIST_DIR=/app/webdist
+    WEB_DIST_DIR=/app/webdist \
+    DATABASE_URL=sqlite:////app/data/biostock.db
 
 WORKDIR /app
 COPY bio-stock-api/requirements.txt .

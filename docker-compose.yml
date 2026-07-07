@@ -5,8 +5,15 @@ services:
       - "8000:8000"
     environment:
       APP_ENV: development
-      # Demo secret — generate a real one for production:
-      #   python -c "import secrets; print(secrets.token_urlsafe(48))"
-      JWT_SECRET_KEY: docker-demo-secret-change-me
+      # Override with a real secret via a root .env file or shell env if you
+      # want one; otherwise config.py's own documented dev-only fallback
+      # applies (safe — it's rejected outright when APP_ENV=production).
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
       DATABASE_URL: sqlite:////app/data/biostock.db
+    volumes:
+      # Persist the SQLite DB across container restarts/rebuilds.
+      - biostock-data:/app/data
     restart: unless-stopped
+
+volumes:
+  biostock-data:
