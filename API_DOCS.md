@@ -11,18 +11,36 @@ Authorization: Bearer <access_token>
 ### `POST /auth/register`
 Body: `{ "email": "user@example.com", "password": "secret12" }`
 (password: min 8 chars, must contain a letter and a digit). Rate limited to
-5 requests/min per IP. Returns `{ "access_token", "token_type" }`.
+5 requests/min per IP (persisted, survives restarts). Returns
+`{ "access_token", "refresh_token", "token_type" }`.
 
 ### `POST /auth/login`
-Body: `{ "email", "password" }`. Rate limited (5/min per IP).
-Returns `{ "access_token", "token_type" }`.
+Body: `{ "email", "password", "otp_code"? }` (`otp_code` required only if the
+account has MFA enabled). Rate limited (5/min per IP).
+Returns `{ "access_token", "refresh_token", "token_type" }`.
+
+### `POST /auth/refresh`
+Body: `{ "refresh_token" }`. Exchanges a valid, unexpired, unrevoked refresh
+token for a new access + refresh token pair (the old refresh token is
+revoked — each one is single-use). Returns the same shape as login.
+
+### `POST /auth/logout`
+Body: `{ "refresh_token" }`. Revokes the refresh token server-side.
+
+### MFA (`/auth/mfa/*`)
+`POST /auth/mfa/setup` (auth required) → `{ secret, otpauth_uri }` — scan into
+an authenticator app. `POST /auth/mfa/verify` → `{ code }` confirms and
+enables MFA. `GET /auth/mfa/status` → `{ enabled }`. TOTP secrets are
+encrypted at rest.
 
 ## Health
 ### `POST /health/log`
 Logs today's biometrics (once per day). Body:
 ```json
-{ "systolic_bp": 118, "diastolic_bp": 76, "steps": 8500, "sleep_hours": 7.5, "resting_hr": 68 }
+{ "systolic_bp": 118, "diastolic_bp": 76, "steps": 8500, "sleep_hours": 7.5, "resting_hr": 68, "local_date": "2026-07-07" }
 ```
+`local_date` (optional, `YYYY-MM-DD`) lets the client's own calendar day
+decide "today" instead of the server's, within a ±1 day tolerance.
 Values are range-validated. Response:
 ```json
 {
