@@ -7,7 +7,17 @@ import {
 
 import { Backdrop, GlassCard } from "../../components/Glass";
 import api from "../../utils/api";
+import { apiErrorMessage, passwordProblem } from "../../utils/errors";
 import { colors, font, radius, space } from "../../utils/theme";
+
+const strength = (pw) => {
+  if (!pw) return null;
+  let s = 0;
+  if (pw.length >= 8) s++;
+  if (/[a-zA-Z]/.test(pw) && /\d/.test(pw)) s++;
+  if (pw.length >= 12 || /[^a-zA-Z0-9]/.test(pw)) s++;
+  return [{ label: "Weak", color: colors.red }, { label: "Okay", color: colors.yellow }, { label: "Strong", color: colors.green }][Math.max(0, s - 1)];
+};
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState("");
@@ -18,18 +28,23 @@ export default function RegisterScreen() {
   const router = useRouter();
 
   const handleRegister = async () => {
-    if (password !== confirmPassword) { setError("Passwords do not match"); return; }
+    if (!email) { setError("Enter your email."); return; }
+    const pwProblem = passwordProblem(password);
+    if (pwProblem) { setError(pwProblem); return; }
+    if (password !== confirmPassword) { setError("Passwords do not match."); return; }
     setLoading(true); setError("");
     try {
       const response = await api.post("/auth/register", { email, password });
       await AsyncStorage.setItem("access_token", response.data.access_token);
       router.replace("/(tabs)/dashboard");
     } catch (err) {
-      setError(err.response?.data?.detail || "Registration failed");
+      setError(apiErrorMessage(err, "Registration failed"));
     } finally {
       setLoading(false);
     }
   };
+
+  const pwStrength = strength(password);
 
   return (
     <Backdrop>
@@ -43,8 +58,14 @@ export default function RegisterScreen() {
             autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
 
           <Text style={[styles.label, { marginTop: 14 }]}>Password</Text>
-          <TextInput style={styles.input} placeholder="min. 6 characters" placeholderTextColor={colors.textFaint}
+          <TextInput style={styles.input} placeholder="8+ chars, letters and numbers" placeholderTextColor={colors.textFaint}
             secureTextEntry value={password} onChangeText={setPassword} />
+          {pwStrength && (
+            <View style={styles.strengthRow}>
+              <View style={[styles.strengthDot, { backgroundColor: pwStrength.color }]} />
+              <Text style={[styles.strengthText, { color: pwStrength.color }]}>{pwStrength.label} password</Text>
+            </View>
+          )}
 
           <Text style={[styles.label, { marginTop: 14 }]}>Confirm Password</Text>
           <TextInput style={styles.input} placeholder="••••••••" placeholderTextColor={colors.textFaint}
@@ -72,6 +93,9 @@ const styles = StyleSheet.create({
   card: { marginBottom: space.lg },
   label: { color: colors.textMuted, fontSize: font.small, fontWeight: "700", marginBottom: 8 },
   input: { backgroundColor: colors.surfaceStrong, borderWidth: 1, borderColor: colors.stroke, borderRadius: radius.sm, padding: 14, color: colors.white, fontSize: font.body },
+  strengthRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 },
+  strengthDot: { width: 8, height: 8, borderRadius: 4 },
+  strengthText: { fontSize: font.tiny, fontWeight: "700" },
   error: { color: colors.red, fontSize: font.small, marginTop: 12, textAlign: "center" },
   button: { backgroundColor: colors.lime, borderRadius: radius.md, padding: 16, alignItems: "center", marginTop: 20 },
   buttonText: { color: colors.bg, fontWeight: "900", fontSize: font.body },

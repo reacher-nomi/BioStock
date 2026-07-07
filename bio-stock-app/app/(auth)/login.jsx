@@ -8,6 +8,7 @@ import {
 
 import { Backdrop, GlassCard } from "../../components/Glass";
 import api from "../../utils/api";
+import { apiErrorMessage } from "../../utils/errors";
 import { colors, font, radius, space } from "../../utils/theme";
 
 export default function LoginScreen() {
@@ -26,7 +27,7 @@ export default function LoginScreen() {
       await AsyncStorage.setItem("access_token", response.data.access_token);
       router.replace("/(tabs)/dashboard");
     } catch (err) {
-      setError(err.response?.data?.detail || "Login failed");
+      setError(apiErrorMessage(err, "Login failed"));
     } finally {
       setLoading(false);
     }

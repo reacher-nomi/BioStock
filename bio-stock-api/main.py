@@ -3,8 +3,7 @@ import os
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 
 from config import get_settings
 from database import Base, engine
@@ -63,10 +62,22 @@ def health_check():
 # Serve the built Expo web app from the same origin as the API (single-origin
 # deployment). This is what makes the app work in GitHub Codespaces: the browser
 # only talks to one forwarded, already-authenticated URL, so there is no
-# cross-origin / second-port problem. Mounted last so API routes take priority.
-WEB_DIR = os.environ.get("WEB_DIST_DIR", "webdist")
+# cross-origin / second-port problem.
+#
+# The catch-all below is a SPA fallback: real files (JS/CSS/images) are served
+# directly, and any other path returns index.html so client-side routes like
+# /register resolve even on a hard refresh. Declared after all API routers, so
+# they take priority.
+WEB_DIR = os.path.abspath(os.environ.get("WEB_DIST_DIR", "webdist"))
 if os.path.isdir(WEB_DIR):
-    app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
+    _index = os.path.join(WEB_DIR, "index.html")
+
+    @app.get("/{full_path:path}")
+    def serve_spa(full_path: str):
+        candidate = os.path.normpath(os.path.join(WEB_DIR, full_path))
+        if full_path and candidate.startswith(WEB_DIR) and os.path.isfile(candidate):
+            return FileResponse(candidate)
+        return FileResponse(_index)
 else:
     @app.get("/")
     def read_root():
